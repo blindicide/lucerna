@@ -78,3 +78,22 @@ Recorded 2026-09-30:
   Repo `blindicide/lucerna` is public → CI/packaging/release workflows are executable.
 - CI runner reference (`ubuntu24` image from the probe): rustc/cargo 1.98.1 **preinstalled**,
   GTK4 dev headers **absent** → `ci.yml` must install `libgtk-4-dev` (and mpv) itself.
+
+### Supervisor rig (changed at operator request)
+
+- First supervisor launch inherited the session default (`deepseek-flash` via
+  `ds2.net.a.blindicide.ru`) and **stalled immediately**: `⚠ Auxiliary title generation
+  failed: HTTP 503: No upstream keys are currently available`, parking at `msg=interrupt`.
+  The harness (Claude Code) was never affected — it does not use that provider.
+- Operator directive: move the supervisor to **AGY-B / `gemini-3.8-flash-high`**
+  (`custom_providers.AGY-B`, base_url `https://agy.net.a.blindicide.ru/v1`).
+- Verified the endpoint directly before repointing: `POST /v1/chat/completions`
+  with `gemini-3.8-flash-high` → `AGY_OK`.
+- Relaunched via
+  `tmux respawn-window -k -t lucerna:supervisor 'hermes --cli --provider AGY-B -m gemini-3.8-flash-high'`.
+  Provider key was placed in the **tmux session environment** (`tmux setenv`, value expanded by
+  the shell so the secret never appears on a command line or in logs), because the key is not
+  exported from `~/.bashrc`.
+- Session `20260930_005314_8874af`. Confirmed live: brief read, phase briefs read, harness pane
+  captured, first `sleep 240` in progress at ~45.3K/256K pinned context.
+
