@@ -1,0 +1,25 @@
+[package]
+name = "lucerna-daemon"
+description = "lucernad: the Lucerna per-user wallpaper service"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lucerna-core.workspace = true
+lucerna-mpv.workspace = true
+lucerna-x11.workspace = true
+lucerna-ipc.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+tracing.workspace = true
+
+[[bin]]
+name = "lucernad"
+path = "src/main.rs"

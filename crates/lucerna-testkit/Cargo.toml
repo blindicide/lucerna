@@ -1,0 +1,28 @@
+[package]
+name = "lucerna-testkit"
+description = "Lucerna test harness, fake mpv and integration suites (never shipped)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lucerna-core.workspace = true
+lucerna-daemon.workspace = true
+lucerna-cli.workspace = true
+
+[dev-dependencies]
+toml.workspace = true
+
+[[bin]]
+name = "lucernad-under-test"
+path = "src/bin/lucernad-under-test.rs"
+
+[[bin]]
+name = "lucernactl-under-test"
+path = "src/bin/lucernactl-under-test.rs"

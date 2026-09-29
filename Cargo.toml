@@ -1,0 +1,47 @@
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+
+# The single canonical version source for every binary, package and document (directive §29).
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT"
+repository = "https://github.com/blindicide/lucerna"
+publish = false
+
+[workspace.dependencies]
+anyhow = "1.0"
+clap = { version = "4.6", features = ["derive"] }
+dirs = "7.0"
+gtk4 = { version = "0.11", features = ["v4_10"] }
+thiserror = "2.0"
+toml = "1.1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Internal crates. `publish = false` makes a version unnecessary, so the root
+# `[workspace.package] version` stays the only place a version number is written.
+lucerna-core = { path = "crates/lucerna-core" }
+lucerna-mpv = { path = "crates/lucerna-mpv" }
+lucerna-x11 = { path = "crates/lucerna-x11" }
+lucerna-ipc = { path = "crates/lucerna-ipc" }
+lucerna-daemon = { path = "crates/lucerna-daemon" }
+lucerna-cli = { path = "crates/lucerna-cli" }
+lucerna-ui = { path = "crates/lucerna-ui" }
+
+[workspace.lints.rust]
+unsafe_code = "deny"
+
+[workspace.lints.clippy]
+unwrap_used = "warn"
+expect_used = "warn"
+panic = "warn"
+todo = "warn"
+dbg_macro = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = "debuginfo"
