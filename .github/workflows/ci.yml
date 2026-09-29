@@ -1,0 +1,92 @@
+# Continuous integration (directive §33, §34).
+#
+# Also exposed through workflow_call so release.yml can re-run the exact same gates.
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # Turn "tool not installed" into a failure instead of a silent skip.
+  LUCERNA_REQUIRE_XVFB: "1"
+  LUCERNA_REQUIRE_DBUS: "1"
+  LUCERNA_REQUIRE_MPV: "1"
+
+jobs:
+  fmt:
+    name: cargo fmt --check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: cargo fmt --check
+
+  clippy:
+    name: cargo clippy -D warnings
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev pkgconf
+      - uses: Swatinem/rust-cache@v2
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: cargo test --workspace
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev pkgconf mpv xvfb dbus jq
+      - uses: Swatinem/rust-cache@v2
+      - name: Test
+        run: cargo test --workspace
+
+  build-release:
+    name: release build and headless smoke
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev pkgconf
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --workspace --release
+      - name: Headless smoke test (no DISPLAY, no WAYLAND_DISPLAY)
+        run: |
+          set -eu
+          for bin in lucerna lucernad lucernactl; do
+            env -u DISPLAY -u WAYLAND_DISPLAY "target/release/$bin" --version
+            env -u DISPLAY -u WAYLAND_DISPLAY "target/release/$bin" --help > /dev/null
+          done
+
+  deny:
+    name: cargo deny
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+
+  scripts:
+    name: script tests and shellcheck
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq shellcheck
+      - name: Shellcheck
+        run: shellcheck scripts/*.sh tests/scripts/*.sh
+      - name: Script tests
+        run: |
+          set -eu
+          for t in tests/scripts/*_test.sh; do
+            echo "== $t"
+            "$t"
+          done
