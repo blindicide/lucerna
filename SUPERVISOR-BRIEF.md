@@ -50,9 +50,12 @@ harness. The only valid status for desktop-appearance behaviour is
   `✻ Fermenting… (12s · ↓ 3.2k tokens · thinking with high effort)` plus
   `esc to interrupt` in the status bar.
 - **The status bar alone is NOT reliable.** The dependable discriminator is the
-  hint line: when **idle** it shows `Try "how does <path> work?"`; while
-  **working** that line is replaced by a rotating `Tip: …` line.
-  Test: `grep -q 'Try "how'` → present means IDLE, absent means WORKING.
+  hint line above the composer: when **idle** it reads `❯ Try "<rotating example>"`
+  (the example text varies — `grep -q 'Try "how'` is WRONG and returns nothing even
+  when idle, verified 2026-09-30); while **working** that line is replaced by a
+  rotating `Tip: …` line.
+  Test: `tmux capture-pane -t lucerna:harness -p -S -14 | grep -q '❯ Try "'`
+  → present means IDLE, absent means WORKING.
 - **COMPLETION / park** — `✻ Brewed for <duration> · done <time>`, the status bar
   drops `esc to interrupt`, and the input prompt is a bare `❯`.
 - **Nudge mechanics** — first `C-u` (clear stray text), then the text and `Enter`
