@@ -15,17 +15,21 @@ recorded as gaps — a missing baseline is never interpolated.
 
 | Item | Value |
 | --- | --- |
-| Session start | (pending) |
-| Session end | (pending) |
-| Resume handle | (pending) |
-| Deliverable | `docs/IMPLEMENTATION-PLAN.md` |
-| Commit | (pending) |
-| Tokens (in / cache_read / cache_create / out) | (pending) |
-| `/usage` session % | (pending) |
-| `/usage` weekly % | (pending) |
-| Cost | (pending) |
+| Session start | 2026-09-30 00:46 CEST |
+| Session end | 2026-09-30 01:05 CEST |
+| Resume handle | `claude --resume 48009747-4bd4-4a3e-8623-d1e0c7d98a78` |
+| Deliverable | `docs/IMPLEMENTATION-PLAN.md` (1,954 lines) |
+| Commit | `b73abda docs: add implementation plan for the v1 campaign` |
+| Tokens (in / cache_read / cache_create / out) | 20 / 1,076,841 / 175,650 / 121,388 (total 1,373,899) |
+| `/usage` session % | 15% used (resets 5:30am Europe/Amsterdam) |
+| `/usage` weekly % | 2% used (resets Oct 4, 9pm Europe/Amsterdam) |
+| Cost | $4.10 (API 19m 29s, wall 21m 12s) |
 
 Notes:
+- Plan produced: 1,954 lines, covering 16 architectural decisions (D1–D16), 8-crate workspace boundary layout enforcing §48, mpv flags rationale, state machine, X11 integration protocol test strategy under Xvfb, packaging matrix, and explicit disclaimer that visual validation is not performed headlessly.
+- Committed cleanly to `main` at `b73abda`.
+- Session clean-exited with `/exit`, resume handle recorded.
+- Phase B launched at 2026-09-30 01:09 CEST with Sonnet 5.5 (`--effort high`).
 
 ---
 
@@ -33,12 +37,12 @@ Notes:
 
 | Item | Value |
 | --- | --- |
-| Session start | (pending) |
-| Resume handle(s) | (pending) |
+| Session start | 2026-09-30 01:09 CEST |
+| Resume handle(s) | (in progress) |
 | Final commit / tag | (pending) |
 | Tokens (in / cache_read / cache_create / out) | (pending) |
-| `/usage` session % | (pending) |
-| `/usage` weekly % | (pending) |
+| `/usage` session % | 15% baseline at start of Phase B |
+| `/usage` weekly % | 2% baseline at start of Phase B |
 | Cost | (pending) |
 
 ### Milestone log
