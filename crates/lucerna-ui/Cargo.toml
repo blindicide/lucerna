@@ -1,0 +1,23 @@
+[package]
+name = "lucerna-ui"
+description = "lucerna: the Lucerna GTK 4 control application"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lucerna-core.workspace = true
+lucerna-ipc.workspace = true
+clap.workspace = true
+gtk4.workspace = true
+tracing.workspace = true
+
+[[bin]]
+name = "lucerna"
+path = "src/main.rs"
