@@ -1,0 +1,33 @@
+/target
+**/target/
+*.rs.bk
+*.pdb
+.cargo/
+Cargo.lock.orig
+
+# packaging build output
+packaging/debian/lucerna*.debhelper.log
+packaging/debian/.debhelper/
+packaging/debian/debhelper-build-stamp
+packaging/debian/files
+packaging/debian/*.substvars
+packaging/rpm/BUILD/
+packaging/rpm/BUILDROOT/
+packaging/rpm/RPMS/
+packaging/rpm/SRPMS/
+packaging/rpm/*.tar.gz
+build/
+dist/
+*.deb
+*.rpm
+
+# editor / OS
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# local scratch
+/tmp/
+*.log

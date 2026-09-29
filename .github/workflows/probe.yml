@@ -1,0 +1,35 @@
+# TEMPORARY pre-flight probe — NOT part of the delivery.
+# Purpose: determine empirically whether GitHub Actions runners start for this
+# public repository, given the account-level billing annotation observed on
+# blindicide/polmon (2026-09-28: "The job was not started because recent account
+# payments have failed or your spending limit needs to be increased", steps=0).
+# The real ci.yml / packages.yml / release.yml are built by the harness per
+# INSTRUCTION-LUCERNA.md sections 33, 36 and 40.
+
+name: probe
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    name: runner availability + toolchain probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Report runner environment
+        run: |
+          echo "runner_os=$RUNNER_OS"
+          echo "image=$ImageOS"
+          uname -a
+          echo "--- rust ---"
+          rustc --version || echo "rustc ABSENT"
+          cargo --version || echo "cargo ABSENT"
+          echo "--- gtk4 dev headers ---"
+          pkg-config --modversion gtk4 || echo "gtk4 dev ABSENT (expected on clean runner)"
+          echo "--- mpv ---"
+          mpv --version | head -1 || echo "mpv ABSENT (expected on clean runner)"
+          echo "--- repo ---"
+          ls -la
