@@ -34,7 +34,10 @@ impl Paths {
             cache_dir: dirs::cache_dir()
                 .unwrap_or_else(|| home.join(".cache"))
                 .join(APP_DIR),
-            runtime_dir: dirs::runtime_dir().map(|d| d.join(APP_DIR)),
+            runtime_dir: crate::runtime::current_uid().ok().and_then(|uid| {
+                crate::runtime::resolve_base(std::env::var_os("XDG_RUNTIME_DIR"), uid)
+                    .map(|base| base.join(APP_DIR))
+            }),
         }
     }
 

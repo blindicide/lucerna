@@ -6,6 +6,39 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-30
+
+### Added
+- Renderer core. A pure, table-tested state machine (`Stopped`, `Starting`, `Playing`,
+  `Paused`, `Stopping`, `Failed`) decides what happens after every event; a supervisor executes
+  its decisions by spawning mpv without a shell, talking to it over a private IPC socket and
+  reaping it.
+- Pause, resume and stop, with a polite `quit` first and escalation to `SIGTERM` and `SIGKILL`.
+- Crash detection with a bounded restart policy: at most three automatic restarts in a
+  60-second window with 1, 2 and 4 second back-off, after which the renderer stays `Failed`
+  until a user action. Deterministic failures (unplayable file, missing file, missing mpv,
+  mpv initialisation error) are reported immediately and never retried.
+- mpv discovery (`LUCERNA_MPV`, then `PATH`), version parsing and an option-compatibility probe
+  that checks the installed mpv accepts every option Lucerna can emit.
+- The mpv argument builder, including audio-off-by-default, hardware decoding and FPS cap
+  options and the four scaling modes (fill, fit, stretch, center), which can be changed on a
+  running renderer without a restart.
+- Bounded, rotating renderer logs (at most 1 MiB per output) and an in-memory tail of mpv's
+  stderr used in failure messages.
+- A PID registry with start times and stale-process recovery that terminates only renderers
+  Lucerna itself started, never unrelated mpv instances.
+- A private runtime directory (mode 0700, ownership checked) for control sockets; no fallback to
+  `/tmp`.
+- Atomic file writes, used by the registry and reusable for configuration.
+- Test infrastructure: a fake mpv whose behaviour is chosen by the media file (crashes, hangs,
+  unsupported files, ignored signals, stderr floods), tiny synthetic media fixtures, and tests
+  against the real mpv with the null video output for mp4, webm, mkv and gif.
+- Architecture documentation of the renderer, including the full mpv argument table.
+
+### Notes
+- No desktop integration exists yet: nothing is drawn onto a desktop until the X11 backend
+  lands. All behaviour here is verified without a display.
+
 ## [0.0.1] - 2026-09-30
 
 ### Added
