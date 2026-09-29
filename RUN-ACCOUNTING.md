@@ -49,7 +49,7 @@ Notes:
 
 | Tag | SHA | Gates (fmt/clippy/test/build) | Packaging | CI | Notes |
 | --- | --- | --- | --- | --- | --- |
-| v0.0.1 | | | n/a | | |
+| v0.0.1 | 8e6862f | PASS (fmt, clippy -D warnings, 6 tests, release build, headless smoke tests) | n/a | PASS (#36644636839) | Workspace bootstrap (8 crates), architecture boundary test, headless safe |
 | v0.1.0 | | | n/a | | |
 | v0.2.0 | | | n/a | | |
 | v0.3.0 | | | n/a | | |
