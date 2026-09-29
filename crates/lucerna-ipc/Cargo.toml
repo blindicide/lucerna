@@ -1,0 +1,15 @@
+[package]
+name = "lucerna-ipc"
+description = "Lucerna D-Bus contract shared by daemon, CLI and GUI"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+lucerna-core.workspace = true
