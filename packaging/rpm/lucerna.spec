@@ -23,15 +23,17 @@ BuildRequires:  libappstream-glib
 Requires:       mpv
 
 %description
-Lucerna plays video and animated-image wallpapers as the desktop background, using mpv. A small
-per-user background service keeps the wallpapers running after the control window is closed,
-restores them at login, and pauses them while they are covered by a fullscreen window or the
-screen is locked.
+Lucerna plays video and animated-image wallpapers as the desktop
+background, using mpv. A small per-user background service keeps the
+wallpapers running after the control window is closed, restores them at
+login, and pauses them while they are covered by a fullscreen window or
+the screen is locked.
 
-The package contains the GTK 4 control application (lucerna), the background service (lucernad)
-and a command-line controller with diagnostics (lucernactl). It supports X11 sessions, with
-Linux Mint Cinnamon as the target desktop; Wayland sessions are detected and reported but not
-supported.
+The package contains the GTK 4 control application (lucerna), the
+background service (lucernad) and a command-line controller with
+diagnostics (lucernactl). It supports X11 sessions, with Linux Mint
+Cinnamon as the target desktop; Wayland sessions are detected and
+reported but not supported.
 
 %prep
 %autosetup -n lucerna-%{lucerna_tarball_version}
