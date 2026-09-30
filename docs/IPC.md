@@ -35,9 +35,9 @@ instance" below).
 | `ListWallpapers` | | `aa{sv}` | The library, with live `available`. |
 | `AddWallpaper` | `s path, s name` | `s id` | Canonicalise, validate and add. Idempotent: an existing path returns the existing id. An empty name uses the file name without extension. |
 | `RemoveWallpaper` | `s id` | | Removes the entry and every assignment that points to it. **Never touches the file.** |
-| `SetWallpaper` | `s wallpaper_id, s display_id` | | Assign and play. Clears a previous `Stop`. *In this version only `*` is accepted; per-display assignment arrives in v0.5.0.* |
-| `ClearAssignment` | `s display_id` | | Remove an assignment. |
-| `SetScaling` | `s display_id, s mode` | | `fill`, `fit`, `stretch` or `center`. Applied live, no restart. |
+| `SetWallpaper` | `s wallpaper_id, s display_id` | | Assign and play. `*` (or empty) assigns to all displays; a display id makes a per-display override. The display must be connected or already configured (`UnknownDisplay` otherwise). Clears a previous `Stop`. |
+| `ClearAssignment` | `s display_id` | | Remove the wallpaper assignment of a display (it then follows the all-displays wallpaper) or of `*`. A per-display entry that then overrides nothing is dropped from the configuration. |
+| `SetScaling` | `s display_id, s mode` | | `fill`, `fit`, `stretch` or `center`, for all displays (`*`) or one. For one display `inherit` removes its override. Applied live, no restart. |
 | `GetSettings` | | `a{sv}` | See "settings". |
 | `SetSettings` | `a{sv}` | | Partial update, validated as a whole: unknown keys, wrong types and bad values are errors and nothing is applied. |
 | `Pause` / `Resume` | | | Set / clear the user pause reason. Other reasons (lock, fullscreen) still apply. |
@@ -76,7 +76,7 @@ instance" below).
 | `unsupported_message` | `s` | user-facing explanation |
 | `playback` | `s` | aggregate: `playing`, `paused`, `stopped`, `idle`, `failed` |
 | `user_paused`, `user_stopped`, `session_locked` | `b` | |
-| `lock_detection`, `fullscreen_detection` | `b` | capabilities of this session |
+| `lock_detection`, `fullscreen_detection` | `b` | capabilities of this session (see "Pause policies" in `docs/ARCHITECTURE.md`) |
 | `mpv_available` | `b` | |
 | `mpv_version` | `s` | |
 | `schema_version` | `u` | configuration schema this daemon writes |
@@ -99,7 +99,7 @@ Failure codes: `mpv-missing`, `launch-failed`, `media-missing`, `media-unsupport
 `primary` (`b`), `x`, `y` (`i`), `width`, `height` (`u`), `rotation` (`normal`, `left`, `inverted`,
 `right`), `edid_manufacturer`, `edid_model`, `edid_serial` (always empty over D-Bus; only
 `GetDiagnostics` includes serial numbers, and `redact` removes them), `wallpaper_id` (effective),
-`wallpaper_source` (`display`, `all`, `none`), `scaling`.
+`wallpaper_source` (`display`, `all`, `none`), `scaling` (effective), `scaling_source` (`display` if this display overrides the all-displays scaling, else `all`).
 
 **Stable display ids** come from EDID (`edid:<MANUFACTURER>-<product>-<serial>`, or
 `edid:<MANUFACTURER>-<product>@<connector>` when the monitor reports no serial) and fall back to the

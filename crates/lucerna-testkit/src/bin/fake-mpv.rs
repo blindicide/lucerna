@@ -37,7 +37,11 @@ struct Shared {
 impl Shared {
     fn record(&self, value: Value) {
         if let Ok(mut log) = self.log.lock() {
-            let _ = writeln!(log, "{value}");
+            // One `write` per record: several fake mpv processes append to the same file, and
+            // `writeln!` would issue the text and the newline separately and let them interleave.
+            let mut line = value.to_string();
+            line.push('\n');
+            let _ = log.write_all(line.as_bytes());
         }
     }
 

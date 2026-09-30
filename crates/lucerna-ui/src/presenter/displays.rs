@@ -73,6 +73,33 @@ pub fn scaling_id(index: u32) -> &'static str {
         .map_or("fill", |(id, _)| id)
 }
 
+/// Per-display scaling entries: the first follows the all-displays mode.
+pub const DISPLAY_SCALING: &[(&str, &str)] = &[
+    ("inherit", "Same as all displays"),
+    ("fill", "Fill (crop to cover)"),
+    ("fit", "Fit (letterbox)"),
+    ("stretch", "Stretch"),
+    ("center", "Center (original size)"),
+];
+
+pub fn display_scaling_index(scaling: &str, source: &str) -> u32 {
+    if source != "display" {
+        return 0;
+    }
+    DISPLAY_SCALING
+        .iter()
+        .position(|(id, _)| *id == scaling)
+        .and_then(|i| u32::try_from(i).ok())
+        .unwrap_or(0)
+}
+
+pub fn display_scaling_id(index: u32) -> &'static str {
+    usize::try_from(index)
+        .ok()
+        .and_then(|i| DISPLAY_SCALING.get(i))
+        .map_or("inherit", |(id, _)| id)
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DisplayRow {
     pub id: String,
@@ -81,6 +108,10 @@ pub struct DisplayRow {
     /// What is playing there, in words.
     pub subtitle: String,
     pub connected: bool,
+    /// Index into the per-display wallpaper choices (0 = same as all displays).
+    pub wallpaper_index: u32,
+    /// Index into [`DISPLAY_SCALING`].
+    pub scaling_index: u32,
 }
 
 /// One row per display (connected first), naming the wallpaper it shows.
@@ -91,6 +122,7 @@ pub fn rows(displays: &[DisplayDto], wallpapers: &[WallpaperDto]) -> Vec<Display
             .find(|w| w.id == id)
             .map(|w| w.name.clone())
     };
+    let choices = wallpaper_choices(wallpapers, false);
     let mut rows: Vec<DisplayRow> = displays
         .iter()
         .map(|d| {
@@ -99,11 +131,19 @@ pub fn rows(displays: &[DisplayDto], wallpapers: &[WallpaperDto]) -> Vec<Display
                 (id, "all") => strings::inherits(&name_of(id).unwrap_or_else(|| id.to_owned())),
                 (id, _) => name_of(id).unwrap_or_else(|| id.to_owned()),
             };
+            // Only an override selects a wallpaper here; otherwise the entry is "same as all".
+            let own = if d.wallpaper_source == "display" {
+                d.wallpaper_id.as_str()
+            } else {
+                ""
+            };
             DisplayRow {
                 id: d.id.clone(),
                 title: d.label.clone(),
                 subtitle,
                 connected: d.connected,
+                wallpaper_index: selected_index(&choices, own),
+                scaling_index: display_scaling_index(&d.scaling, &d.scaling_source),
             }
         })
         .collect();
@@ -174,6 +214,8 @@ mod tests {
                 connected: false,
                 wallpaper_id: "w".into(),
                 wallpaper_source: "display".into(),
+                scaling: "center".into(),
+                scaling_source: "display".into(),
                 ..DisplayDto::default()
             },
             DisplayDto {
@@ -203,5 +245,30 @@ mod tests {
         );
         assert_eq!(rows[1].subtitle, strings::NO_WALLPAPER_ASSIGNED);
         assert_eq!(rows[2].subtitle, "Rain");
+        // Only an override selects a wallpaper in the per-display drop-down.
+        assert_eq!(rows[0].wallpaper_index, 0, "inherits: same as all displays");
+        assert_eq!(
+            rows[2].wallpaper_index, 1,
+            "overrides: the wallpaper itself"
+        );
+        assert_eq!(rows[0].scaling_index, 0);
+        assert_eq!(
+            rows[2].scaling_index,
+            display_scaling_index("center", "display")
+        );
+    }
+
+    #[test]
+    fn per_display_scaling_entries_round_trip_and_start_with_inherit() {
+        assert_eq!(DISPLAY_SCALING[0].0, "inherit");
+        for (i, (id, _)) in DISPLAY_SCALING.iter().enumerate() {
+            let index = u32::try_from(i).unwrap();
+            assert_eq!(display_scaling_id(index), *id);
+            if i > 0 {
+                assert_eq!(display_scaling_index(id, "display"), index);
+            }
+        }
+        assert_eq!(display_scaling_index("fit", "all"), 0, "not overridden");
+        assert_eq!(display_scaling_id(99), "inherit");
     }
 }

@@ -138,6 +138,7 @@ async fn a_second_daemon_on_the_same_bus_exits_cleanly() {
         paths,
         session: SessionEnv::default(),
         bus: BusChoice::Address(first.bus.address.clone()),
+        system_bus: lucerna_daemon::SystemBusChoice::Disabled,
         backend: BackendChoice::Injected(Box::new(lucerna_core::testing::FakeBackend::new())),
         mpv_override: None,
         path_var: None,
@@ -171,6 +172,7 @@ async fn a_second_daemon_with_the_same_runtime_directory_is_stopped_by_the_lock(
         paths: first.paths.clone(), // same runtime directory
         session: SessionEnv::default(),
         bus: BusChoice::Address(second_bus.address.clone()),
+        system_bus: lucerna_daemon::SystemBusChoice::Disabled,
         backend: BackendChoice::Injected(Box::new(lucerna_core::testing::FakeBackend::new())),
         mpv_override: None,
         path_var: None,
@@ -274,10 +276,17 @@ async fn bad_requests_get_specific_errors_and_actionable_messages() {
     assert!(matches!(e, LucernaError::UnknownWallpaper(_)));
 
     let (_, id) = play_media(&f, "ok.mp4", PLAY).await;
-    let e = lerr(f.proxy.set_wallpaper(&id, "conn:HDMI-1").await.unwrap_err());
+    let e = lerr(f.proxy.set_wallpaper(&id, "conn:NOPE-9").await.unwrap_err());
     assert!(
-        matches!(e, LucernaError::InvalidArgument(ref m) if m.contains("not available in this version")),
+        matches!(e, LucernaError::UnknownDisplay(ref m) if m.contains("lucernactl monitors")),
         "{e:?}"
+    );
+    let e = lerr(f.proxy.clear_assignment("conn:NOPE-9").await.unwrap_err());
+    assert!(matches!(e, LucernaError::UnknownDisplay(_)), "{e:?}");
+    let e = lerr(f.proxy.set_scaling("*", "inherit").await.unwrap_err());
+    assert!(
+        matches!(e, LucernaError::InvalidArgument(_)),
+        "'inherit' only makes sense for one display: {e:?}"
     );
     let e = lerr(f.proxy.set_scaling("*", "zoom").await.unwrap_err());
     assert!(

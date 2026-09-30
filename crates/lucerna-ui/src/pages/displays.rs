@@ -10,18 +10,22 @@ use super::{boxed_list, control_row, dropdown, page_box, set_labels};
 use crate::controller::{AppState, Controller};
 use crate::presenter::banner::Link;
 use crate::presenter::displays::{
-    Choice, DisplayRow, SCALING, rows, scaling_id, scaling_index, selected_index, wallpaper_choices,
+    Choice, DISPLAY_SCALING, DisplayRow, SCALING, display_scaling_id, rows, scaling_id,
+    scaling_index, selected_index, wallpaper_choices,
 };
 use crate::strings;
 
 pub struct DisplaysPage {
+    controller: Rc<Controller>,
     pub root: gtk::Box,
     pub all_wallpaper: gtk::DropDown,
     pub all_scaling: gtk::DropDown,
     list: gtk::ListBox,
     empty: gtk::Label,
     choices: RefCell<Vec<Choice>>,
-    shown: RefCell<Vec<DisplayRow>>,
+    shown: RefCell<(Vec<DisplayRow>, Vec<Choice>)>,
+    /// The controls of each built row, in row order (for tests).
+    row_controls: RefCell<Vec<(gtk::DropDown, gtk::DropDown)>>,
     /// True while the page itself is changing a control, so it does not send that as a request.
     updating: Cell<bool>,
 }
@@ -57,21 +61,16 @@ impl DisplaysPage {
         let empty = gtk::Label::new(Some(strings::NO_DISPLAYS));
         empty.add_css_class("dim-label");
         root.append(&empty);
-        let note = gtk::Label::new(Some(strings::PER_DISPLAY_NOTE));
-        note.set_xalign(0.0);
-        note.set_wrap(true);
-        note.add_css_class("dim-label");
-        note.add_css_class("caption");
-        root.append(&note);
-
         let page = Rc::new(Self {
+            controller: Rc::clone(controller),
             root,
             all_wallpaper,
             all_scaling,
             list,
             empty,
             choices: RefCell::new(Vec::new()),
-            shown: RefCell::new(Vec::new()),
+            shown: RefCell::new((Vec::new(), Vec::new())),
+            row_controls: RefCell::new(Vec::new()),
             updating: Cell::new(false),
         });
         page.connect(controller);
@@ -132,24 +131,76 @@ impl DisplaysPage {
         self.updating.set(false);
 
         let wanted = rows(&state.displays, &state.wallpapers);
-        if *self.shown.borrow() != wanted {
+        let per_display_choices = wallpaper_choices(&state.wallpapers, false);
+        if self.shown.borrow().0 != wanted || self.shown.borrow().1 != per_display_choices {
             while let Some(child) = self.list.first_child() {
                 self.list.remove(&child);
             }
+            self.row_controls.borrow_mut().clear();
             for row in &wanted {
-                let list_row = control_row(
-                    &row.title,
-                    &row.subtitle,
-                    &gtk::Box::new(gtk::Orientation::Horizontal, 0),
-                );
-                if !row.connected {
-                    list_row.add_css_class("dim-label");
-                }
-                self.list.append(&list_row);
+                self.list
+                    .append(&self.build_row(row, &per_display_choices, state));
             }
-            *self.shown.borrow_mut() = wanted;
+            *self.shown.borrow_mut() = (wanted, per_display_choices);
         }
-        self.empty.set_visible(self.shown.borrow().is_empty());
-        self.list.set_visible(!self.shown.borrow().is_empty());
+        let any = !self.shown.borrow().0.is_empty();
+        self.empty.set_visible(!any);
+        self.list.set_visible(any);
+    }
+}
+
+impl DisplaysPage {
+    /// A row with this display's own wallpaper and scaling controls. The controls' selections are
+    /// set *before* their handlers are connected, so building a row never sends a request.
+    fn build_row(&self, row: &DisplayRow, choices: &[Choice], state: &AppState) -> gtk::ListBoxRow {
+        let labels: Vec<&str> = choices.iter().map(|c| c.label.as_str()).collect();
+        let wallpaper = dropdown(&labels);
+        wallpaper.set_selected(row.wallpaper_index);
+        let scaling_labels: Vec<&str> = DISPLAY_SCALING.iter().map(|(_, label)| *label).collect();
+        let scaling = dropdown(&scaling_labels);
+        scaling.set_selected(row.scaling_index);
+
+        let connected = state.link == Link::Connected;
+        wallpaper.set_sensitive(connected);
+        scaling.set_sensitive(connected);
+
+        let controls = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        controls.append(&wallpaper);
+        controls.append(&scaling);
+        self.row_controls
+            .borrow_mut()
+            .push((wallpaper.clone(), scaling.clone()));
+
+        let (controller, display) = (self.controller.clone(), row.id.clone());
+        let ids: Vec<Option<String>> = choices.iter().map(|c| c.id.clone()).collect();
+        wallpaper.connect_selected_notify(move |dropdown| {
+            let index = usize::try_from(dropdown.selected()).unwrap_or(0);
+            controller.assign_wallpaper(display.clone(), ids.get(index).cloned().flatten());
+        });
+        let (controller, display) = (self.controller.clone(), row.id.clone());
+        scaling.connect_selected_notify(move |dropdown| {
+            controller.set_display_scaling(
+                display.clone(),
+                display_scaling_id(dropdown.selected()).to_owned(),
+            );
+        });
+
+        let list_row = control_row(&row.title, &row.subtitle, &controls);
+        if !row.connected {
+            list_row.add_css_class("dim-label");
+        }
+        list_row
+    }
+}
+
+impl DisplaysPage {
+    /// The wallpaper and scaling drop-downs of the `index`-th row, for tests.
+    pub fn row_controls(&self, index: usize) -> Option<(gtk::DropDown, gtk::DropDown)> {
+        self.row_controls.borrow().get(index).cloned()
+    }
+
+    /// The list of per-display rows, for tests.
+    pub fn list(&self) -> &gtk::ListBox {
+        &self.list
     }
 }

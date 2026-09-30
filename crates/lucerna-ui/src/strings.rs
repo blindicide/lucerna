@@ -52,8 +52,6 @@ pub const NO_WALLPAPER: &str = "None";
 pub const SAME_AS_ALL: &str = "Same as all displays";
 pub const NO_WALLPAPER_ASSIGNED: &str = "No wallpaper";
 pub const NO_DISPLAYS: &str = "No displays were detected.";
-pub const PER_DISPLAY_NOTE: &str =
-    "Choosing a different wallpaper for each display arrives in a later version.";
 
 pub fn missing_choice(name: &str) -> String {
     format!("{name} (missing)")

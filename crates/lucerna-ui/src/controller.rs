@@ -11,6 +11,7 @@ use std::time::Duration;
 use futures_util::StreamExt;
 use gtk4::glib;
 use lucerna_ipc::dto::{DisplayDto, SettingsDto, SettingsPatch, StatusDto, WallpaperDto};
+use lucerna_ipc::names::ALL_DISPLAYS;
 
 use crate::link::{DaemonLink, Event, LinkError, find_daemon, spawn_daemon};
 use crate::presenter::banner::Link;
@@ -305,16 +306,32 @@ impl Controller {
         self.act(move |link| async move { link.remove_wallpaper(&id).await });
     }
 
+    /// Play `id` on every display.
     pub fn play_everywhere(self: &Rc<Self>, id: String) {
-        self.act(move |link| async move { link.set_wallpaper_everywhere(&id).await });
+        self.assign_wallpaper(ALL_DISPLAYS.to_owned(), Some(id));
     }
 
     pub fn clear_everywhere(self: &Rc<Self>) {
-        self.act(|link| async move { link.clear_wallpaper_everywhere().await });
+        self.assign_wallpaper(ALL_DISPLAYS.to_owned(), None);
+    }
+
+    /// Assign `id` to `display` (`*` for all displays), or clear the assignment if `None`.
+    pub fn assign_wallpaper(self: &Rc<Self>, display: String, id: Option<String>) {
+        self.act(move |link| async move {
+            match id {
+                Some(id) => link.set_wallpaper(&id, &display).await,
+                None => link.clear_wallpaper(&display).await,
+            }
+        });
     }
 
     pub fn set_scaling_everywhere(self: &Rc<Self>, mode: String) {
-        self.act(move |link| async move { link.set_scaling_everywhere(&mode).await });
+        self.set_display_scaling(ALL_DISPLAYS.to_owned(), mode);
+    }
+
+    /// `mode` is a scaling mode, or `inherit` for one display.
+    pub fn set_display_scaling(self: &Rc<Self>, display: String, mode: String) {
+        self.act(move |link| async move { link.set_scaling(&display, &mode).await });
     }
 
     pub fn apply_settings(self: &Rc<Self>, patch: SettingsPatch) {
