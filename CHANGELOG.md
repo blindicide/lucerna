@@ -6,6 +6,44 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-30
+
+### Added
+- The Cinnamon/X11 wallpaper backend (`lucerna-x11`) behind a replaceable `WallpaperBackend`
+  trait. Wallpaper surfaces are undecorated, focus-less, click-through (empty input shape),
+  off the taskbar and pager, sticky on all workspaces, marked as desktop-type and below, and
+  identifiable by class, name, pid and a private marker property.
+- RandR display discovery: RandR 1.5 monitors with a CRTC fallback for older servers, rotation,
+  refresh rate, primary flag, mirrored outputs, and EDID reading.
+- Stable monitor identity from EDID (manufacturer, product code, serial) with a connector
+  fallback and collision handling, so assignments survive enumeration-order changes.
+- Two stacking strategies selectable through configuration: an override-redirect surface kept at
+  the bottom of the stack (default) and a window-manager-managed desktop-type window, plus
+  re-lowering when something disturbs the stack.
+- An event thread that reports display changes, fullscreen windows (per rectangle, ignoring
+  maximised, hidden and other-workspace windows), stacking disturbances and loss of the display
+  connection, with debouncing and no polling.
+- Cinnamon, Muffin, compositor and Nemo probes and structured diagnostics (window ids, stacking
+  positions, whether each surface sits below Nemo's desktop window), plus a read-only display
+  probe for `lucernactl doctor`.
+- Pure fullscreen-to-monitor mapping, and a scriptable fake backend for testing the daemon
+  without an X server.
+- X11 protocol test suite under Xvfb: connection, RandR enumeration including virtual monitors,
+  every window property, click-through event routing with a negative control, resize, restack,
+  a simulated Nemo window, fullscreen detection, hotplug, cleanup, connection loss and reconnect,
+  and mpv embedding into a surface. These are protocol tests only.
+- `docs/MANUAL-ACCEPTANCE.md`, the 20-test manual desktop campaign (LUC-T01 to LUC-T20), and
+  `docs/X11-CINNAMON-NOTES.md`, which lists every assumption about Cinnamon and Nemo together
+  with the diagnostic field that confirms or refutes it. Every result is "NOT RUN — REQUIRES REAL
+  DESKTOP".
+
+### Notes
+- Desktop appearance, icon layering, click-through on a real Cinnamon session, window stacking
+  and per-monitor fullscreen behaviour are IMPLEMENTED — MANUAL DESKTOP VALIDATION REQUIRED. The
+  Xvfb tests prove protocol behaviour only.
+- Virtual RandR monitors created with `SetMonitor` do not emit change events on Xvfb; real
+  output and mode changes do.
+
 ## [0.1.0] - 2026-09-30
 
 ### Added

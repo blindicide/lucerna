@@ -67,6 +67,7 @@ fn supervisor(
         timings: Timings::default(),
         // No display on the server: render to the null video output.
         vo_override: Some("null".to_owned()),
+        extra_env: Vec::new(),
         registry: Arc::new(PidRegistry::new(env.registry_path())),
     };
     RendererSupervisor::spawn(config, launch, None)
