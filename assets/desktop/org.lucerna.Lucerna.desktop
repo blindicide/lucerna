@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Lucerna
+GenericName=Animated Wallpapers
+Comment=Animated wallpapers for Linux
+Exec=lucerna
+Icon=org.lucerna.Lucerna
+Terminal=false
+StartupNotify=true
+Categories=Utility;Settings;GTK;
+Keywords=wallpaper;video;animated;desktop;background;

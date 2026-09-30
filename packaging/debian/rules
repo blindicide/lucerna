@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+# The Rust toolchain comes from rustup (rust-toolchain.toml pins the version), so it is not a
+# Build-Depends: it is not packaged at a usable version on the target distributions.
+
+export CARGO_TERM_COLOR = never
+
+%:
+	dh $@
+
+override_dh_auto_configure:
+	@true
+
+override_dh_auto_build:
+	cargo build --release --locked -p lucerna-ui -p lucerna-daemon -p lucerna-cli
+
+override_dh_auto_test:
+	@echo "tests run in continuous integration (see .github/workflows/ci.yml)"
+
+override_dh_auto_install:
+	bash scripts/install-files.sh --destdir $(CURDIR)/debian/lucerna --prefix /usr
+
+override_dh_installchangelogs:
+	dh_installchangelogs CHANGELOG.md
+
+override_dh_strip:
+	dh_strip --no-automatic-dbgsym
+
+override_dh_auto_clean:
+	@true
