@@ -142,6 +142,14 @@ detected: fullscreen windows that bypass the window manager (some old games) are
 `lucernactl pause`. A maximised window never pauses anything. With several monitors only the display
 a fullscreen window covers (at least 90 % of it) is paused.
 
+## Pause when locked not working
+
+*Check:* `lucernactl status` line "Detection: … screen lock yes/no". "no" means the session offers
+none of the sources Lucerna knows (`org.cinnamon.ScreenSaver`, `org.freedesktop.ScreenSaver`,
+logind's `LockedHint`), so `pause_on_lock` has no effect; `doctor` shows
+`lock_detection.source`. The lock screen hides the wallpaper anyway; the only cost is power. Use
+`lucernactl pause` in a lock script if you need it.
+
 ## Configuration problems
 
 * "The configuration was written by a newer Lucerna": update Lucerna; the file is left untouched.
