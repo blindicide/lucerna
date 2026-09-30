@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @VERSION@ and @DATE@ are filled in by scripts/install-files.sh when a package is built,
+     so the release entry always follows the workspace version. -->
+<component type="desktop-application">
+  <id>org.lucerna.Lucerna</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Lucerna</name>
+  <summary>Animated wallpapers for Linux</summary>
+  <developer id="io.github.blindicide">
+    <name>The Lucerna authors</name>
+  </developer>
+  <description>
+    <p>
+      Lucerna plays video and animated-image wallpapers as your desktop background. A small
+      background service keeps them running after the control window is closed, restores them when
+      you log in, and pauses them while they are covered by a fullscreen window or the screen is
+      locked.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Use any video or animated image that mpv can play, without copying it anywhere</li>
+      <li>One wallpaper for every monitor, or a different one on each</li>
+      <li>Fill, fit, stretch and center scaling</li>
+      <li>Silent by default, with hardware decoding and an FPS limit</li>
+      <li>A command-line controller and diagnostics for scripting and bug reports</li>
+    </ul>
+    <p>Lucerna currently supports X11 sessions, with Linux Mint Cinnamon as the target desktop.</p>
+  </description>
+  <launchable type="desktop-id">org.lucerna.Lucerna.desktop</launchable>
+  <url type="homepage">https://github.com/blindicide/lucerna</url>
+  <url type="bugtracker">https://github.com/blindicide/lucerna/issues</url>
+  <provides>
+    <binary>lucerna</binary>
+    <binary>lucernad</binary>
+    <binary>lucernactl</binary>
+  </provides>
+  <categories>
+    <category>Utility</category>
+    <category>Settings</category>
+  </categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="@VERSION@" date="@DATE@"/>
+  </releases>
+</component>

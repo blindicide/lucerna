@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lucerna icon: a lantern. Plain geometry, no external fonts or images, deterministic. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#26364d"/>
+      <stop offset="1" stop-color="#121a28"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.55">
+      <stop offset="0" stop-color="#fff4c2"/>
+      <stop offset="0.55" stop-color="#ffc857"/>
+      <stop offset="1" stop-color="#f28c28"/>
+    </radialGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#bg)"/>
+  <!-- handle -->
+  <path d="M50 30 C50 14 78 14 78 30" fill="none" stroke="#c9d3e0" stroke-width="5" stroke-linecap="round"/>
+  <!-- cap -->
+  <path d="M40 40 L88 40 L80 30 L48 30 Z" fill="#c9d3e0"/>
+  <!-- glass -->
+  <path d="M42 40 L86 40 L92 82 L36 82 Z" fill="url(#glow)"/>
+  <!-- frame -->
+  <path d="M42 40 L36 82 M86 40 L92 82 M64 40 L64 82" fill="none" stroke="#3a4a63" stroke-width="3"/>
+  <!-- base -->
+  <rect x="32" y="82" width="64" height="10" rx="4" fill="#c9d3e0"/>
+  <rect x="38" y="92" width="52" height="8" rx="4" fill="#8fa0b8"/>
+</svg>
