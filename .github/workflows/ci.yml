@@ -7,6 +7,12 @@ on:
   push:
   pull_request:
   workflow_call:
+    inputs:
+      ref:
+        description: "Git ref to check out; empty means the ref that triggered the run"
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -24,6 +30,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Check formatting
         run: cargo fmt --check
 
@@ -32,6 +40,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Install system packages
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev pkgconf
       - uses: Swatinem/rust-cache@v2
@@ -43,6 +53,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Install system packages
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev pkgconf mpv xvfb dbus jq
       - uses: Swatinem/rust-cache@v2
@@ -54,6 +66,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Install system packages
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-4-dev pkgconf
       - uses: Swatinem/rust-cache@v2
@@ -72,6 +86,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: EmbarkStudios/cargo-deny-action@v2
 
   scripts:
@@ -79,6 +95,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends jq shellcheck
       - name: Shellcheck
