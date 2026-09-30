@@ -1,0 +1,140 @@
+# Tagged releases (directive §40). The numbers are the twelve steps of the directive.
+#
+# A release is published only if EVERY mandatory job succeeds: `publish` needs all the others, so
+# a failed package build can never produce a release with a single package.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: "1-4: check out the tag, verify it is annotated and matches the version"
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.info.outputs.version }}
+      deb_version: ${{ steps.info.outputs.deb_version }}
+      rpm_version: ${{ steps.info.outputs.rpm_version }}
+      rpm_release: ${{ steps.info.outputs.rpm_release }}
+      prerelease: ${{ steps.info.outputs.prerelease }}
+    steps:
+      - name: 1. Check out the exact tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Fetch the tag object itself
+        # A checkout can make an annotated tag look lightweight; fetch the real tag ref.
+        run: git fetch --force origin "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}"
+      - name: 2-4. Annotated tag, tag equals the Cargo workspace version, changelog present
+        id: info
+        run: |
+          set -eu
+          scripts/check-tag.sh "${{ github.ref_name }}"
+          version="$(scripts/version.sh --semver)"
+          {
+            echo "version=$version"
+            echo "deb_version=$(scripts/version.sh --deb)"
+            echo "rpm_version=$(scripts/version.sh --rpm-version)"
+            echo "rpm_release=$(scripts/version.sh --rpm-release)"
+            case "$version" in *-*) echo "prerelease=true" ;; *) echo "prerelease=false" ;; esac
+          } >> "$GITHUB_OUTPUT"
+
+  ci:
+    name: "5-6: full test suite and release build"
+    needs: verify
+    uses: ./.github/workflows/ci.yml
+
+  packages:
+    name: "7-8: build and smoke-test the .deb and the .rpm"
+    needs: verify
+    uses: ./.github/workflows/packages.yml
+    with:
+      expected_version: ${{ needs.verify.outputs.version }}
+
+  source:
+    name: "9: source archive"
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - name: Create lucerna-<version>.tar.gz from the tag
+        run: scripts/make-source-archive.sh "refs/tags/${{ github.ref_name }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: source
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: "10-12: checksums, GitHub Release, attach artifacts"
+    needs: [verify, ci, packages, source]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.verify.outputs.version }}
+      DEB: lucerna_${{ needs.verify.outputs.deb_version }}_amd64.deb
+      RPM: lucerna-${{ needs.verify.outputs.rpm_version }}-${{ needs.verify.outputs.rpm_release }}.x86_64.rpm
+      TARBALL: lucerna-${{ needs.verify.outputs.version }}.tar.gz
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: 10. Exactly the expected artifacts, then SHA-256 checksums
+        run: |
+          set -eu
+          cd artifacts
+          expected="$(printf '%s\n' "$DEB" "$RPM" "$TARBALL" | sort)"
+          found="$(find . -maxdepth 1 -type f -printf '%f\n' | sort)"
+          if [ "$found" != "$expected" ]; then
+            echo "unexpected artifact set"; echo "expected:"; echo "$expected"; echo "found:"; echo "$found"
+            exit 1
+          fi
+          sha256sum "$DEB" "$RPM" "$TARBALL" > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cat SHA256SUMS
+      - name: Release notes from CHANGELOG.md
+        run: |
+          {
+            scripts/changelog-section.sh "$VERSION"
+            echo
+            echo "---"
+            echo "Desktop behaviour (wallpaper appearance, icon layering, stacking) has **not** been validated on a real"
+            echo "desktop by the build pipeline; see docs/MANUAL-ACCEPTANCE.md."
+            echo
+            echo "Verify downloads with: \`sha256sum -c SHA256SUMS\`"
+          } > notes.md
+      - name: 11-12. Create or update the release and attach the artifacts
+        run: |
+          set -eu
+          tag="${{ github.ref_name }}"
+          flags=""
+          [ "${{ needs.verify.outputs.prerelease }}" = "true" ] && flags="--prerelease"
+          files="artifacts/$DEB artifacts/$RPM artifacts/$TARBALL artifacts/SHA256SUMS"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            # A re-run: replace the assets; the tag itself is never modified.
+            # shellcheck disable=SC2086
+            gh release upload "$tag" $files --clobber
+            gh release edit "$tag" --notes-file notes.md $flags
+          else
+            # shellcheck disable=SC2086
+            gh release create "$tag" --verify-tag --title "Lucerna $VERSION" --notes-file notes.md $flags $files
+          fi
