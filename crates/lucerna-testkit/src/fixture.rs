@@ -9,12 +9,13 @@ use lucerna_core::paths::Paths;
 use lucerna_core::renderer::Timings;
 use lucerna_core::session::SessionEnv;
 use lucerna_core::testing::FakeBackend;
-use lucerna_daemon::{BackendChoice, BusChoice, DaemonOptions, Outcome, run};
+use lucerna_daemon::{BackendChoice, BusChoice, DaemonOptions, Outcome, SystemBusChoice, run};
 use lucerna_ipc::LucernaProxy;
 use lucerna_ipc::dto::{DisplayDto, SettingsDto, StatusDto, WallpaperDto};
 use tokio::task::JoinHandle;
 
 use crate::TestEnv;
+use crate::providers::{LOGIND_SESSION_ID, LockProvider, LockProviderHandle};
 use crate::testbus::TestBus;
 
 /// The `fake-mpv` binary. Cargo builds it for every integration test of this package and exports
@@ -62,6 +63,9 @@ pub struct Setup {
     /// Text written to `config.toml` before the daemon starts, with `{ROOT}` replaced by the
     /// test directory.
     pub config_toml: Option<String>,
+    /// Which screen-lock service the fake session offers, and whether the screen starts locked.
+    pub lock_provider: LockProvider,
+    pub initially_locked: bool,
     /// Files created in the runtime directory before the daemon starts (name, content).
     pub runtime_files: Vec<(String, Vec<u8>)>,
 }
@@ -75,12 +79,15 @@ impl Default for Setup {
                 xdg_current_desktop: Some("X-Cinnamon".to_owned()),
                 desktop_session: Some("cinnamon".to_owned()),
                 wayland_display: None,
+                xdg_session_id: None,
             },
             mpv_override: Some(fake_mpv_path()),
             backend: None,
             recheck_interval: Duration::from_millis(300),
             outputs: vec![output("HDMI-1", 0, true)],
             config_toml: None,
+            lock_provider: LockProvider::None,
+            initially_locked: false,
             runtime_files: Vec::new(),
         }
     }
@@ -99,6 +106,7 @@ pub fn daemon_options(
         paths: paths.clone(),
         session,
         bus: BusChoice::Address(bus_address.to_owned()),
+        system_bus: SystemBusChoice::Disabled,
         backend,
         mpv_override,
         path_var: Some(OsString::from("/nonexistent-lucerna-test-path")),
@@ -119,7 +127,10 @@ pub struct Fixture {
     pub paths: Paths,
     pub fake: FakeBackend,
     pub proxy: LucernaProxy<'static>,
+    /// The fake screen-lock service, if the setup asked for one.
+    pub lock: Option<LockProviderHandle>,
     conn: zbus::Connection,
+    _system_bus: Option<TestBus>,
     task: Option<JoinHandle<Outcome>>,
 }
 
@@ -167,14 +178,37 @@ impl Fixture {
         let backend = setup
             .backend
             .unwrap_or_else(|| BackendChoice::Injected(Box::new(fake.clone())));
-        let options = daemon_options(
+        let mut session = setup.session;
+        let mut system_bus = None;
+        let lock = match setup.lock_provider {
+            LockProvider::None => None,
+            LockProvider::Logind => {
+                let system = TestBus::start()?;
+                let handle = LockProviderHandle::start(
+                    LockProvider::Logind,
+                    &system.address,
+                    setup.initially_locked,
+                )
+                .await?;
+                session.xdg_session_id = Some(LOGIND_SESSION_ID.to_owned());
+                system_bus = Some(system);
+                Some(handle)
+            }
+            kind => {
+                Some(LockProviderHandle::start(kind, &bus.address, setup.initially_locked).await?)
+            }
+        };
+        let mut options = daemon_options(
             &paths,
             &bus.address,
             backend,
             setup.mpv_override,
-            setup.session,
+            session,
             setup.recheck_interval,
         );
+        if let Some(system) = &system_bus {
+            options.system_bus = SystemBusChoice::Address(system.address.clone());
+        }
         let task = tokio::spawn(run(options));
 
         let conn = zbus::connection::Builder::address(bus.address.as_str())
@@ -189,7 +223,9 @@ impl Fixture {
             paths,
             fake,
             proxy,
+            lock,
             conn,
+            _system_bus: system_bus,
             task: Some(task),
         })
     }
