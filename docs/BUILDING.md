@@ -9,7 +9,7 @@
 | `pkgconf` | Used by the GTK bindings' build scripts. |
 | `mpv` | Runtime dependency, and needed by the integration tests that use a real mpv. |
 | `jq` | Used by `scripts/version.sh`. |
-| `xvfb`, `dbus` | Used by the X11 protocol tests and daemon integration tests (later milestones). |
+| `xvfb`, `dbus` | `Xvfb` runs the X11 protocol tests; `dbus-daemon` provides the private session bus for the daemon and CLI integration tests. |
 
 Debian/Ubuntu/Mint:
 

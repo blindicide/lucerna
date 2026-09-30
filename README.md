@@ -12,9 +12,10 @@ command-line controller, installed from native `.deb` and `.rpm` packages.
 ## Status
 
 **Development status: pre-release (`0.x`).** This repository is being built milestone by
-milestone toward `v1.0.0-rc.1` (see [CHANGELOG.md](CHANGELOG.md)). The current release only
-contains the repository skeleton: three binaries that report their version, a logging
-set-up, and CI. There is no wallpaper functionality yet.
+milestone toward `v1.0.0-rc.1` (see [CHANGELOG.md](CHANGELOG.md)). Today the background service
+(`lucernad`) and the command-line controller (`lucernactl`) work end to end: renderer
+supervision, the Cinnamon/X11 backend, configuration, the D-Bus API and diagnostics. The GTK
+control application is still a stub. **Nothing has been validated on a real desktop yet.**
 
 > Lucerna is developed on a headless server. Automated tests cover logic, process
 > supervision, D-Bus and X11 *protocol* behaviour. Nothing about how the wallpaper *looks* or
@@ -48,14 +49,23 @@ once the packaging milestone lands. Until then, build from source; see
 
 ```sh
 cargo build --release
-target/release/lucerna --version
-target/release/lucernactl --help
+target/release/lucernad &                          # the per-user service
+target/release/lucernactl play ~/Videos/rain.webm  # add it to the library and play it
+target/release/lucernactl status
+target/release/lucernactl pause     # / resume / stop / reload
+target/release/lucernactl doctor    # everything needed to debug desktop integration
 ```
 
 ## Documentation
 
 - [docs/BUILDING.md](docs/BUILDING.md) - build dependencies, local and headless builds, tests
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - components and crate boundaries
+- [docs/CONFIGURATION.md](docs/CONFIGURATION.md) - config file, settings and defaults
+- [docs/IPC.md](docs/IPC.md) - the D-Bus API
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - common problems
+- [docs/MANUAL-ACCEPTANCE.md](docs/MANUAL-ACCEPTANCE.md) - the desktop test campaign (not yet run)
+- [docs/X11-CINNAMON-NOTES.md](docs/X11-CINNAMON-NOTES.md) - what the X11 backend assumes about Cinnamon
+- [docs/TEST-MATRIX.md](docs/TEST-MATRIX.md) - which test covers which requirement
 - [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md) - the v1 plan
 
 ## Non-goals for v1

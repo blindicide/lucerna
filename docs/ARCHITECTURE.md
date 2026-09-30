@@ -240,6 +240,68 @@ lets daemon policy be tested without an X server.
 What the design assumes about Cinnamon and Nemo, and how to check each assumption, is in
 `docs/X11-CINNAMON-NOTES.md`. The manual desktop campaign is `docs/MANUAL-ACCEPTANCE.md`.
 
+## Daemon, CLI and D-Bus (implemented in v0.3.0)
+
+### `lucernad` startup and shutdown
+
+1. Parse arguments, initialise logging.
+2. Create/verify the private runtime directory (0700, ours). Without one, renderers are refused
+   and the reason is reported, but the daemon still serves D-Bus.
+3. **Single instance, guard one:** non-blocking `flock` on `daemon.lock` (the file holds the PID).
+4. **Guard two:** connect to the session bus and take `org.lucerna.Lucerna1` *without* replacing an
+   existing owner (zbus would replace by default; a test caught this). The interface is served at
+   the same moment, so early calls queue until the engine is ready.
+5. Terminate stale renderers from a crashed predecessor (registry + start time + `mpv` executable
+   + our socket path on the command line), remove stale `mpv-*.sock`.
+6. Load configuration and `state.json` (never fails: problems become notices), find mpv.
+7. Classify the session; wait up to 10 s for `DISPLAY`; connect the X11 backend; enumerate
+   displays; reconcile.
+
+Shutdown (SIGTERM, SIGINT, SIGHUP, `Quit`, or the display connection being lost): stop every
+renderer in parallel with the quit → TERM → KILL escalation, destroy the wallpaper windows,
+remove sockets and the registry, flush state, release the bus name, release the lock, exit 0.
+
+### The engine
+
+One `Engine` task owns configuration, library, backend, renderers and policy inputs. It handles one
+message at a time (D-Bus commands with a `oneshot` reply, backend events, renderer events, lock
+changes, signals, timers), so nothing needs a lock and the GUI, CLI and daemon cannot lose each
+other's updates. The zbus interface object holds no state; it only turns calls into messages.
+
+Everything that starts or stops a renderer goes through **reconciliation**: compute the desired set
+of renderers from configuration, connected displays, file availability and pause policy (pure
+functions in `lucerna-core::{plan, policy}`), diff it against what is running, and apply the
+resulting `Destroy`, `Replace`, `Create`, `Resize`, `SetScaling` and `SetPaused` actions.
+
+Design decisions worth knowing:
+
+* **A failed renderer never leaves a black window over your normal background.** No surface is
+  created when mpv or the file is missing; after a terminal failure the surface is removed.
+* **Failures that retrying cannot fix are terminal** (see the renderer section) and wait for a user
+  action: `Start`, `Reload` or choosing a wallpaper.
+* **The library flags are honest:** `available` is rewritten only when it changes.
+* **`Reload` starts over completely:** stop renderers, re-read configuration, re-probe mpv,
+  reconnect the backend, reconcile.
+* **Stacking fights are bounded:** at most five `refresh()` calls per ten seconds, then one per ten
+  seconds with a single warning; `doctor` reports the count.
+* **Per-display assignment:** the configuration, reconciler and engine already handle it; the
+  D-Bus API accepts only `*` until v0.5.0, where the per-display path is enabled and tested.
+
+### Configuration
+
+Schema v1 in `lucerna-core::config`. Reading is lenient and keeps the `toml_edit` document; saving
+writes only the fields that changed. See `docs/CONFIGURATION.md` for the rules.
+
+### D-Bus and CLI
+
+The contract lives in `lucerna-ipc` (names, `a{sv}` dictionaries and their typed views, errors and
+exit codes, and the generated async/blocking proxy) and is documented in `docs/IPC.md`. `zbus` is
+used without its `tokio` feature so the GTK client never needs to host a tokio runtime; the daemon
+uses zbus's own executor threads and talks to its tokio engine through channels.
+
+`lucernactl` is a blocking client: text or `--json` output, meaningful exit codes, `doctor` that
+works with or without a daemon and never modifies anything.
+
 ## Status by area
 
 | Area | Status |
@@ -247,4 +309,5 @@ What the design assumes about Cinnamon and Nemo, and how to check each assumptio
 | Workspace, logging, version, headless-safe binaries | implemented (v0.0.1) |
 | Renderer core: argument builder, state machine, supervision, stale recovery | implemented (v0.1.0) |
 | X11 backend: RandR, surfaces, hints, click-through, restack, events, Cinnamon/Nemo probes | implemented (v0.2.0) - protocol-tested under Xvfb; **desktop appearance: MANUAL VALIDATION REQUIRED** |
-| Daemon, D-Bus, GUI, policies, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
+| Daemon, D-Bus API, CLI, configuration, state, diagnostics, single instance, clean shutdown | implemented (v0.3.0) |
+| GUI, per-display assignment and lock pause in the API, lifecycle polish, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
