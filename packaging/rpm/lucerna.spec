@@ -52,6 +52,9 @@ appstream-util validate-relax --nonet %{buildroot}%{_datadir}/metainfo/org.lucer
 %{_bindir}/lucerna
 %{_bindir}/lucernad
 %{_bindir}/lucernactl
+%{_mandir}/man1/lucerna.1*
+%{_mandir}/man1/lucernad.1*
+%{_mandir}/man1/lucernactl.1*
 %{_datadir}/applications/org.lucerna.Lucerna.desktop
 %{_datadir}/icons/hicolor/scalable/apps/org.lucerna.Lucerna.svg
 %{_datadir}/metainfo/org.lucerna.Lucerna.metainfo.xml

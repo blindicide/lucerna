@@ -1,0 +1,48 @@
+.TH LUCERNA 1 "@DATE@" "Lucerna @VERSION@" "Lucerna"
+.SH NAME
+lucerna \- graphical control application for Lucerna animated wallpapers
+.SH SYNOPSIS
+.B lucerna
+.RB [ \-v | \-\-verbose ]
+.br
+.B lucerna
+.RB ( \-\-help | \-\-version )
+.SH DESCRIPTION
+.B lucerna
+opens the Lucerna control window: the wallpaper library, the displays, the settings and an About
+page. It never plays wallpapers itself; it talks to the background service
+.BR lucernad (1)
+over the session D-Bus, and starts the service if it is not running. Closing the window does not
+stop the wallpaper.
+.PP
+A graphical session is required. Without one,
+.B lucerna
+prints an explanation and exits with status 1;
+.B \-\-help
+and
+.B \-\-version
+work anywhere.
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-verbose
+Log at debug level.
+.TP
+.BR \-h ", " \-\-help
+Print usage and exit.
+.TP
+.BR \-V ", " \-\-version
+Print the version and exit.
+.SH ENVIRONMENT
+.TP
+.B LUCERNA_LOG, RUST_LOG
+Log filter, for example
+.BR lucerna=debug .
+.SH FILES
+.TP
+.I ~/.config/lucerna/config.toml
+Configuration (written only by the service).
+.SH SEE ALSO
+.BR lucernad (1),
+.BR lucernactl (1)
+.PP
+Full documentation is in /usr/share/doc/lucerna.
