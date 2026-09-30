@@ -920,3 +920,36 @@ async fn stale_sockets_and_registry_from_a_previous_run_are_cleaned_at_startup()
         "the registry is reset"
     );
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn calls_that_arrive_during_shutdown_get_an_error_instead_of_hanging_the_daemon() {
+    // Regression test: a client polling while the daemon quits used to leave a handler waiting for
+    // a reply that was only dropped after shutdown finished, so shutdown never finished.
+    let mut f = fixture!("shutdown-race");
+    f.ready().await;
+    let proxy = f.proxy.clone();
+    let hammer = tokio::spawn(async move {
+        let mut errors = 0;
+        for _ in 0..200 {
+            if proxy.get_status().await.is_err() {
+                errors += 1;
+            }
+        }
+        errors
+    });
+    tokio::time::sleep(Duration::from_millis(5)).await;
+    f.proxy.quit().await.ok();
+    assert_eq!(
+        f.join().await,
+        Outcome::Clean,
+        "shutdown completes even with a client still calling"
+    );
+    let errors = tokio::time::timeout(Duration::from_secs(30), hammer)
+        .await
+        .expect("the client finished")
+        .unwrap();
+    assert!(
+        errors > 0,
+        "once the daemon is gone the calls fail rather than hang"
+    );
+}

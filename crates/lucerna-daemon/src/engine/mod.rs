@@ -331,6 +331,18 @@ impl Engine {
 
     /// Stop everything in the order §52 requires.
     async fn shutdown(mut self) {
+        // Stop accepting requests and answer everything already queued. Clients that call while
+        // we shut down must get an error immediately: otherwise their handlers would wait for
+        // replies that are only dropped when this function returns, and closing the bus
+        // connection (which waits for handlers) would never finish.
+        self.rx.close();
+        while let Ok(msg) = self.rx.try_recv() {
+            if let EngineMsg::Command { reply, .. } = msg {
+                let _ = reply.send(Err(lucerna_ipc::LucernaError::Internal(
+                    "The Lucerna daemon is shutting down.".to_owned(),
+                )));
+            }
+        }
         // 1. Renderers first (in parallel, each bounded by its own escalation).
         self.stop_all_slots().await;
         // 2. Remove the wallpaper windows.
