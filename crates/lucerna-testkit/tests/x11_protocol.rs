@@ -709,6 +709,12 @@ fn nemo_simulation_detected() {
     assert_eq!(found["xid"], nemo, "{diagnostics}");
     assert_eq!(found["depth"], 24);
     assert_eq!(found["window_type"][0], "_NET_WM_WINDOW_TYPE_DESKTOP");
+    // The X connection, server and RandR facts §21 asks for are part of the daemon's report too.
+    let connection = &diagnostics["connection"];
+    assert!(connection["server"]["vendor"].is_string(), "{diagnostics}");
+    assert_eq!(connection["randr"]["present"], true);
+    assert!(connection["randr"]["version"].is_string());
+    assert!(connection["display"].is_string());
     let surface = &diagnostics["surfaces"][0];
     assert_eq!(
         surface["below_nemo"], true,
