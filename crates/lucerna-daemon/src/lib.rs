@@ -8,6 +8,7 @@ mod engine;
 mod lock;
 mod messages;
 mod options;
+mod screensaver;
 mod service;
 
 use std::process::ExitCode;
@@ -23,7 +24,7 @@ use crate::lock::{DaemonLock, LockError};
 use crate::messages::EngineMsg;
 use crate::service::LucernaService;
 
-pub use options::{BackendChoice, BusChoice, DaemonOptions};
+pub use options::{BackendChoice, BusChoice, DaemonOptions, SystemBusChoice};
 
 /// Command line of `lucernad`.
 #[derive(Debug, Parser)]
@@ -60,6 +61,7 @@ pub async fn run(options: DaemonOptions) -> Outcome {
         mut paths,
         session,
         bus,
+        system_bus,
         backend,
         mpv_override,
         path_var,
@@ -169,6 +171,7 @@ pub async fn run(options: DaemonOptions) -> Outcome {
         mpv_override,
         path_var,
         autostart_on_first_run,
+        system_bus,
     };
     let mut engine = Engine::new(opts, conn, tx, rx, backend);
     tracing::info!(version = VERSION, "lucernad starting");

@@ -905,6 +905,7 @@ version = "0.4.0"
 dependencies = [
  "anyhow",
  "clap",
+ "futures-util",
  "lucerna-core",
  "lucerna-ipc",
  "lucerna-mpv",

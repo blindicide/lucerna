@@ -1,6 +1,7 @@
 //! The D-Bus methods, one by one (docs/IMPLEMENTATION-PLAN.md §7.2).
 
 use lucerna_core::autostart;
+use lucerna_core::backend::OutputId;
 use lucerna_core::config::{Config, ConfigError, StackingSetting, WallpaperId};
 use lucerna_core::library::LibraryError;
 use lucerna_core::timeutil::now_rfc3339;
@@ -169,63 +170,105 @@ impl Engine {
         Ok(Reply::Unit)
     }
 
+    /// Resolve a `display_id` argument: `None` means all displays, `Some(id)` a specific one.
+    fn target(&self, display: &str) -> Result<Option<OutputId>, LucernaError> {
+        if display.is_empty() || display == ALL_DISPLAYS {
+            return Ok(None);
+        }
+        self.known_display(display)?;
+        Ok(Some(OutputId::new(display)))
+    }
+
+    /// The label to remember for a display, so it can be shown while unplugged.
+    fn label_of(&self, id: &OutputId) -> Option<String> {
+        self.outputs.iter().find(|o| &o.id == id).map(|o| o.label())
+    }
+
     async fn set_wallpaper(&mut self, id: &str, display: &str) -> Outcome {
         let wallpaper_id = parse_wallpaper_id(id)?;
         if self.loaded.config.find_wallpaper(&wallpaper_id).is_none() {
             return Err(unknown_wallpaper(id));
         }
-        let all = display.is_empty() || display == ALL_DISPLAYS;
-        if !all {
-            return Err(LucernaError::InvalidArgument(
-                "Assigning a wallpaper to a single display is not available in this version yet.\n\
-                 Use '*' to assign it to all displays."
-                    .to_owned(),
-            ));
-        }
+        let target = self.target(display)?;
+        let label = target.as_ref().and_then(|t| self.label_of(t));
         self.mutate(|config| {
-            config.all_displays.wallpaper = Some(wallpaper_id);
+            match &target {
+                None => config.all_displays.wallpaper = Some(wallpaper_id),
+                Some(output) => {
+                    let entry = config.displays.entry(output.clone()).or_default();
+                    entry.wallpaper = Some(wallpaper_id);
+                    if label.is_some() {
+                        entry.last_seen = label;
+                    }
+                }
+            }
             Ok(())
         })?;
         // Choosing a wallpaper is an explicit "play this".
         self.user_stopped = false;
         self.clear_failed_slots().await;
         self.reconcile().await;
+        self.emit_displays_changed().await;
         Ok(Reply::Unit)
     }
 
     async fn clear_assignment(&mut self, display: &str) -> Outcome {
-        if display.is_empty() || display == ALL_DISPLAYS {
-            self.mutate(|config| {
-                config.all_displays.wallpaper = None;
-                Ok(())
-            })?;
-        } else {
-            self.known_display(display)?;
-            return Err(LucernaError::InvalidArgument(
-                "Per-display assignments are not available in this version yet.".to_owned(),
-            ));
-        }
-        self.reconcile().await;
-        Ok(Reply::Unit)
-    }
-
-    async fn set_scaling(&mut self, display: &str, mode: &str) -> Outcome {
-        let mode: ScalingMode =
-            mode.parse()
-                .map_err(|e: lucerna_core::types::ParseEnumError| {
-                    LucernaError::InvalidArgument(format!("{e}."))
-                })?;
-        if !(display.is_empty() || display == ALL_DISPLAYS) {
-            self.known_display(display)?;
-            return Err(LucernaError::InvalidArgument(
-                "Per-display scaling is not available in this version yet.\nUse '*' for all displays.".to_owned(),
-            ));
-        }
+        let target = self.target(display)?;
         self.mutate(|config| {
-            config.all_displays.scaling = mode;
+            match &target {
+                None => config.all_displays.wallpaper = None,
+                Some(output) => {
+                    if let Some(entry) = config.displays.get_mut(output) {
+                        entry.wallpaper = None;
+                        // An entry that overrides nothing any more is dropped, keeping the file tidy.
+                        if entry.scaling.is_none() {
+                            config.displays.remove(output);
+                        }
+                    }
+                }
+            }
             Ok(())
         })?;
         self.reconcile().await;
+        self.emit_displays_changed().await;
+        Ok(Reply::Unit)
+    }
+
+    /// `mode` is `fill`, `fit`, `stretch` or `center`; for one display also `inherit`, which
+    /// removes the override so the display follows the all-displays scaling again.
+    async fn set_scaling(&mut self, display: &str, mode: &str) -> Outcome {
+        let target = self.target(display)?;
+        let parsed: Option<ScalingMode> =
+            if mode.trim().eq_ignore_ascii_case("inherit") && target.is_some() {
+                None
+            } else {
+                Some(
+                    mode.parse()
+                        .map_err(|e: lucerna_core::types::ParseEnumError| {
+                            LucernaError::InvalidArgument(format!("{e}."))
+                        })?,
+                )
+            };
+        let label = target.as_ref().and_then(|t| self.label_of(t));
+        self.mutate(|config| {
+            match (&target, parsed) {
+                (None, Some(mode)) => config.all_displays.scaling = mode,
+                (Some(output), _) => {
+                    let entry = config.displays.entry(output.clone()).or_default();
+                    entry.scaling = parsed;
+                    if label.is_some() {
+                        entry.last_seen = label;
+                    }
+                    if entry.wallpaper.is_none() && entry.scaling.is_none() {
+                        config.displays.remove(output);
+                    }
+                }
+                (None, None) => {}
+            }
+            Ok(())
+        })?;
+        self.reconcile().await;
+        self.emit_displays_changed().await;
         Ok(Reply::Unit)
     }
 
