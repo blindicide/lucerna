@@ -11,7 +11,7 @@ command-line controller, installed from native `.deb` and `.rpm` packages.
 
 ## Status
 
-**Development status: release candidate baseline (`0.9.x`, heading for `v1.0.0-rc.1`).** The
+**Development status: release candidate (`1.0.0-rc.1`), awaiting desktop acceptance.** The
 background service (`lucernad`), the command-line controller (`lucernactl`) and the GTK control
 application (`lucerna`) are feature-complete for v1: renderer supervision, the Cinnamon/X11
 backend, multi-monitor, fullscreen and screen-lock pause, configuration, the D-Bus API,
