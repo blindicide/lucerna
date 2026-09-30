@@ -1,8 +1,8 @@
 # Architecture
 
 Lucerna is a native control application plus a small per-user daemon, with `mpv` doing the
-decoding and rendering. This document grows with each milestone; sections not yet
-implemented say so.
+decoding and rendering. Each section says which milestone implemented it; desktop-facing behaviour is marked
+as needing manual validation.
 
 ## Components
 
@@ -442,4 +442,6 @@ and the page updates, errors reach the banner, and the GUI notices the daemon le
 | GTK control application: pages, daemon control, error banner | implemented (v0.4.0) — structure tested under Xvfb; **visual quality NOT VALIDATED ON DEVELOPMENT SERVER** |
 | Per-display assignments, hotplug and absent-display restoration, per-monitor fullscreen pause, screen-lock pause | implemented (v0.5.0) — logic tested; **real-desktop behaviour MANUAL VALIDATION REQUIRED** (LUC-T09, T12, T13) |
 | Login race handling, logout/kill cleanup, stale-process recovery, bounded daemon log, failure recovery paths | implemented (v0.6.0) — tested against Xvfb and fakes; **real-login behaviour MANUAL VALIDATION REQUIRED** (LUC-T14, T17, T18, T19) |
-| Packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
+| Native `.deb` / `.rpm`, install/removal smoke tests | implemented (v0.7.0) - built and installed in fresh Ubuntu 24.04 and Fedora 44 containers; **menu entry and icon: MANUAL VALIDATION REQUIRED** (LUC-T01, T02) |
+| Automated release: annotated-tag and version check, full suite, packages, source archive, SHA-256, GitHub Release | implemented (v0.8.0, hardened v0.9.0); see `docs/PACKAGING.md` |
+| `doctor` report matches the directive's list; test matrix complete; manual acceptance frozen | v0.9.0 |

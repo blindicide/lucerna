@@ -11,12 +11,14 @@ command-line controller, installed from native `.deb` and `.rpm` packages.
 
 ## Status
 
-**Development status: pre-release (`0.x`).** This repository is being built milestone by
-milestone toward `v1.0.0-rc.1` (see [CHANGELOG.md](CHANGELOG.md)). Today the background service
-(`lucernad`), the command-line controller (`lucernactl`) and the GTK control application
-(`lucerna`) work end to end: renderer supervision, the Cinnamon/X11 backend, configuration, the
-D-Bus API, diagnostics and the four-page GUI. **Nothing has been validated on a real desktop
-yet: the GUI's look and the wallpaper's behaviour under Cinnamon are unverified.**
+**Development status: release candidate baseline (`0.9.x`, heading for `v1.0.0-rc.1`).** The
+background service (`lucernad`), the command-line controller (`lucernactl`) and the GTK control
+application (`lucerna`) are feature-complete for v1: renderer supervision, the Cinnamon/X11
+backend, multi-monitor, fullscreen and screen-lock pause, configuration, the D-Bus API,
+diagnostics, autostart, the four-page GUI, native `.deb`/`.rpm` packages and an automated release
+pipeline. **Nothing has been validated on a real desktop yet: the GUI's look and the wallpaper's
+behaviour under Cinnamon are unverified, and the release candidate exists so a person can do
+that.**
 
 > Lucerna is developed on a headless server. Automated tests cover logic, process
 > supervision, D-Bus and X11 *protocol* behaviour. Nothing about how the wallpaper *looks* or
@@ -72,6 +74,21 @@ target/release/lucernactl doctor    # everything needed to debug desktop integra
 - [docs/PACKAGING.md](docs/PACKAGING.md) - package layout, versions and builds
 - [docs/TEST-MATRIX.md](docs/TEST-MATRIX.md) - which test covers which requirement
 - [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md) - the v1 plan
+
+## Known limitations
+
+- **Not validated on a real desktop.** Whether the wallpaper appears behind the desktop icons,
+  keeps them clickable, stays under windows and out of Alt+Tab is unproven. The default
+  `override-redirect` strategy, and the `desktop-window` alternative, are both implemented; which
+  one Cinnamon accepts is decided by `docs/MANUAL-ACCEPTANCE.md`.
+- **X11 only.** Wayland sessions are detected and refused with an explanation.
+- **Fullscreen detection uses EWMH only.** A fullscreen window that bypasses the window manager
+  (some old games) is not detected; use `lucernactl pause`.
+- **Screen-lock detection** depends on `org.cinnamon.ScreenSaver`, `org.freedesktop.ScreenSaver`
+  or logind answering; `lucernactl status` says whether any did.
+- **Packages are unsigned**; `SHA256SUMS` only detects corrupted downloads. Only x86_64 is built.
+- **Builds need network access** (crates and the pinned toolchain); vendored sources for
+  distribution archives are future work.
 
 ## Non-goals for v1
 

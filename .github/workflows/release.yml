@@ -126,15 +126,28 @@ jobs:
         run: |
           set -eu
           tag="${{ github.ref_name }}"
-          flags=""
-          [ "${{ needs.verify.outputs.prerelease }}" = "true" ] && flags="--prerelease"
-          files="artifacts/$DEB artifacts/$RPM artifacts/$TARBALL artifacts/SHA256SUMS"
+          pre="${{ needs.verify.outputs.prerelease }}"
+          # The release stays a draft (invisible to users) until every asset is attached and
+          # verified, so a failed upload can never leave a public, partial release.
           if gh release view "$tag" >/dev/null 2>&1; then
-            # A re-run: replace the assets; the tag itself is never modified.
-            # shellcheck disable=SC2086
-            gh release upload "$tag" $files --clobber
-            gh release edit "$tag" --notes-file notes.md $flags
+            # A re-run: keep the release, replace its notes and assets. The tag is never touched.
+            gh release edit "$tag" --notes-file notes.md --prerelease="$pre"
           else
-            # shellcheck disable=SC2086
-            gh release create "$tag" --verify-tag --title "Lucerna $VERSION" --notes-file notes.md $flags $files
+            gh release create "$tag" --draft --verify-tag --title "Lucerna $VERSION" \
+              --notes-file notes.md --prerelease="$pre"
           fi
+          for name in "$DEB" "$RPM" "$TARBALL" SHA256SUMS; do
+            attempt=1
+            until gh release upload "$tag" "artifacts/$name" --clobber; do
+              [ "$attempt" -lt 3 ] || { echo "could not upload $name"; exit 1; }
+              attempt=$((attempt + 1))
+              sleep 5
+            done
+          done
+          uploaded="$(gh release view "$tag" --json assets -q '.assets[].name' | sort)"
+          expected="$(printf '%s\n' "$DEB" "$RPM" "$TARBALL" SHA256SUMS | sort)"
+          if [ "$uploaded" != "$expected" ]; then
+            echo "release asset set is wrong"; echo "expected:"; echo "$expected"; echo "uploaded:"; echo "$uploaded"
+            exit 1
+          fi
+          gh release edit "$tag" --draft=false --prerelease="$pre"

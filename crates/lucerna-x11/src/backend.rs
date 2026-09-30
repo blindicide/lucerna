@@ -256,6 +256,7 @@ impl WallpaperBackend for X11Backend {
             "backend": self.kind.as_str(),
             "stacking_mode": self.stacking.as_str(),
             "root_children": children.len(),
+            "connection": facts::connection_facts(&self.conn).unwrap_or(Value::Null),
             "surfaces": surfaces,
             "nemo_desktop_window": nemo,
             "nemo_process_ids": facts::nemo_desktop_pids(),

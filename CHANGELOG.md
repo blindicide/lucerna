@@ -6,6 +6,27 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-30
+
+### Added
+- `lucernactl doctor` now also reports the X connection, X server vendor and release, RandR
+  version and window-manager name when the daemon answers (not only when it is unreachable), and
+  says how many recent renderer failures there are. A field-by-field test keeps the report
+  matching the directive's list.
+- README "Known limitations", and a "Not automated, and why" section in `docs/TEST-MATRIX.md`
+  that maps every behaviour the server cannot check to its manual test.
+
+### Changed
+- The release workflow now creates the GitHub Release as a draft, uploads each asset with
+  retries, checks the exact asset set and only then publishes it. (The v0.8.0 run failed once on
+  a duplicate-asset error during upload and succeeded on re-run; a failed upload can no longer
+  leave a public, partial release.)
+- `docs/MANUAL-ACCEPTANCE.md` is frozen for the release candidate: LUC-T01 to LUC-T20, every
+  result still `NOT RUN — REQUIRES REAL DESKTOP`.
+
+### Notes
+- `cargo deny` is clean without any exception in `deny.toml`.
+
 ## [0.8.0] - 2026-09-30
 
 ### Added

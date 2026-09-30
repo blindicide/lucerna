@@ -284,6 +284,40 @@ async fn doctor_with_a_daemon_includes_its_diagnostics() {
         "no probe when the daemon answers"
     );
 
+    // Directive §21: every item of the diagnostic list has a home in the report.
+    assert_eq!(d["daemon_version"], env!("CARGO_PKG_VERSION"));
+    assert_eq!(report["config"]["current_schema_version"], 1);
+    assert!(d["status"]["schema_version"].is_number(), "schema version");
+    for key in [
+        "XDG_SESSION_TYPE",
+        "XDG_CURRENT_DESKTOP",
+        "DESKTOP_SESSION",
+        "DISPLAY",
+    ] {
+        assert!(d["session"].get(key).is_some(), "session.{key}");
+    }
+    assert!(
+        d["backend"]["available"].is_boolean(),
+        "X connection status"
+    );
+    assert!(d["backend_diagnostics"].is_object(), "X window information");
+    assert!(d["displays"][0]["id"].is_string(), "monitor identity");
+    assert!(
+        d["displays"][0]["connector"].is_string(),
+        "detected outputs"
+    );
+    assert!(
+        d["displays"][0].get("edid_model").is_some(),
+        "EDID identity"
+    );
+    assert!(d["status"]["renderers"].is_array(), "renderer states");
+    assert!(d["recent_failures"].is_array(), "recent renderer failures");
+    for key in ["config_dir", "state_dir", "cache_dir", "runtime_dir"] {
+        assert!(d["paths"][key].is_string(), "paths.{key}");
+    }
+    assert!(report["paths"]["config_file"].is_string());
+    assert_eq!(report["autostart"]["state"], "enabled");
+
     let text = ctl(&bus, &root, &["doctor"]).await;
     assert_eq!(text.code, 0);
     assert!(
