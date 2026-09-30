@@ -302,6 +302,52 @@ uses zbus's own executor threads and talks to its tokio engine through channels.
 `lucernactl` is a blocking client: text or `--json` output, meaningful exit codes, `doctor` that
 works with or without a daemon and never modifies anything.
 
+## Desktop lifecycle (implemented in v0.6.0)
+
+**Login.** The autostart entry starts `lucernad` early in the session, possibly before the X
+server accepts connections or before the window manager (Muffin) or `nemo-desktop` exist. The
+daemon therefore waits (bounded, `LUCERNA_DISPLAY_WAIT_MS`, default 10 s) first for `DISPLAY`, then
+for the X server, then for `_NET_SUPPORTING_WM_CHECK`, and only then creates surfaces. If the window
+manager never appears it proceeds with a warning; if `nemo-desktop` maps later, the stacking
+watchdog re-asserts the bottom position. D-Bus requests that arrive during this wait are answered as
+soon as the daemon is ready. The autostart entry is created on the first run only, and an entry the
+user removed or disabled (also from Cinnamon's *Startup Applications*) is never brought back.
+
+**Logout and crashes.** SIGTERM, SIGINT and SIGHUP, a `Quit` request, and the X server
+disappearing all run the same clean shutdown. If the daemon is killed outright:
+
+1. the kernel stops mpv (`PR_SET_PDEATHSIG`), and X destroys the windows of a client that vanished;
+2. if a renderer nevertheless survives (it ignores SIGTERM), the next daemon finds it in
+   `renderers.json` by pid, process start time, executable name and its private socket path, and
+   terminates it before starting anything. An mpv that does not match every one of those is never
+   touched.
+
+**Renderer failure policy.** A crash is retried at most three times within sixty seconds (1, 2 and
+4 second back-off); then the renderer stays failed with `restart-limit` until the user acts.
+Deterministic failures (missing mpv or file, unplayable file, mpv initialisation error) are never
+retried. While retries are pending the surface stays; once a failure is terminal the surface is
+removed so the normal desktop background shows. Recovery paths: `Start` or `lucernactl reload`
+(renews the budget), choosing a wallpaper, or - for a missing file - the file reappearing
+(checked every 60 s, only while something is missing). Every failure is announced with a
+`RendererFailed` signal, shown in `lucernactl status`, the GUI banner and `doctor`, and remembered
+in `state.json`.
+
+**mpv missing.** Reported at start and on every reload with the actionable message; no surface is
+created. Installing mpv and choosing Reload is enough - no restart of the daemon is needed.
+
+**Configuration problems** never stop the daemon: a corrupt file is moved aside and defaults are
+used, a newer schema is read-only, an unreadable file is not overwritten; each is reported by
+`lucernactl status`, the GUI banner and `doctor`.
+
+**Logging (§25).** `lucernad` logs to stderr (the journal) and to
+`$XDG_STATE_HOME/lucerna/logs/lucernad.log`, which is bounded (two files of at most 512 KiB).
+Events at `info`: daemon start and stop, backend selection, each detected display, display changes,
+wallpaper assignment, renderer start, launch (with pid), pause and resume (with the display),
+renderer exit, configuration reload and screen-lock source. Failures are `warn`. Nothing is logged
+per frame or per poll: a test proves that hundreds of status calls add no log lines. mpv's own
+output goes to separate bounded per-display logs and only its last few lines reach the daemon log,
+attached to a failure.
+
 ## Multi-monitor and pause policies (implemented in v0.5.0)
 
 **Identity.** Assignments are keyed by the stable display id (EDID-based, connector fallback), never
@@ -395,4 +441,5 @@ and the page updates, errors reach the banner, and the GUI notices the daemon le
 | Daemon, D-Bus API, CLI, configuration, state, diagnostics, single instance, clean shutdown | implemented (v0.3.0) |
 | GTK control application: pages, daemon control, error banner | implemented (v0.4.0) — structure tested under Xvfb; **visual quality NOT VALIDATED ON DEVELOPMENT SERVER** |
 | Per-display assignments, hotplug and absent-display restoration, per-monitor fullscreen pause, screen-lock pause | implemented (v0.5.0) — logic tested; **real-desktop behaviour MANUAL VALIDATION REQUIRED** (LUC-T09, T12, T13) |
-| Lifecycle polish, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
+| Login race handling, logout/kill cleanup, stale-process recovery, bounded daemon log, failure recovery paths | implemented (v0.6.0) — tested against Xvfb and fakes; **real-login behaviour MANUAL VALIDATION REQUIRED** (LUC-T14, T17, T18, T19) |
+| Packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
