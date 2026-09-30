@@ -54,6 +54,7 @@ fn config(env: &TestEnv) -> SupervisorConfig {
         restart_policy: policy(3, 60_000),
         timings: fast_timings(),
         vo_override: None,
+        extra_env: Vec::new(),
         registry: Arc::new(PidRegistry::new(env.registry_path())),
     }
 }
