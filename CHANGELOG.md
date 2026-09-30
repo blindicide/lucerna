@@ -6,6 +6,37 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-30
+
+### Added
+- Login handling. At session start the daemon waits, within a bound, for the display, the X
+  server and then the window manager before it creates any wallpaper surface, and warns and
+  continues if no window manager ever appears. The autostart entry is created on the first run
+  only; an entry the user removed or disabled (including from Cinnamon's Startup Applications) is
+  never brought back.
+- A bounded daemon log, `lucernad.log` (two files of at most 512 KiB), next to the journal output.
+  The events the directive lists are logged concisely: daemon start and stop, backend selection,
+  displays, wallpaper assignment, renderer launch, exit, pause and resume, reloads, and failures.
+  A test proves that polling the daemon adds no log lines.
+- Recovery tests that cover the whole path: a renderer that crashes twice and recovers, a crash
+  storm that stops at the restart limit and is recovered with Start, an unplayable file that
+  fails once with an explanation, a wallpaper on a drive that comes back by itself, and mpv
+  installed after the daemon started.
+- Process-level tests for SIGHUP (logout), a killed daemon (the kernel stops mpv) and a killed
+  daemon whose renderer survives (the next daemon terminates it by pid, start time, executable
+  and socket), and a test showing an unrelated mpv is never touched.
+- The command-line status and doctor output now show a corrupt-configuration notice and an
+  mpv-missing explanation, covered by end-to-end tests.
+
+### Changed
+- A renderer that fails for good no longer keeps a black surface over the desktop background;
+  the surface is removed until the user acts (Start, Reload, or choosing a wallpaper).
+- Renderer exits are logged.
+
+### Notes
+- Login ordering, logout, autostart across sessions and behaviour on a real Cinnamon session
+  (LUC-T14, T17, T18, T19) remain IMPLEMENTED — MANUAL DESKTOP VALIDATION REQUIRED.
+
 ## [0.5.0] - 2026-09-30
 
 ### Added

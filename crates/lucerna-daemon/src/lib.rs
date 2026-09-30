@@ -205,7 +205,11 @@ fn spawn_signal_forwarders(tx: &tokio::sync::mpsc::UnboundedSender<EngineMsg>) {
 /// Entry point shared by `lucernad` and the testkit wrapper.
 pub fn cli_main() -> ExitCode {
     let args = Args::parse();
-    lucerna_core::logging::init("lucernad", args.verbose);
+    // Logs go to stderr (the journal) and to a bounded file: two files of at most 512 KiB each.
+    let log_file = lucerna_core::paths::Paths::from_env()
+        .log_dir()
+        .join("lucernad.log");
+    lucerna_core::logging::init_with_file("lucernad", args.verbose, &log_file, 512 * 1024);
 
     let runtime = match tokio::runtime::Builder::new_current_thread()
         .enable_all()

@@ -20,6 +20,7 @@ x11rb = { workspace = true, features = ["randr", "shape", "xtest"] }
 lucerna-daemon.workspace = true
 lucerna-cli.workspace = true
 lucerna-ipc.workspace = true
+futures-util.workspace = true
 zbus.workspace = true
 serde_json.workspace = true
 signal-hook.workspace = true
