@@ -284,8 +284,8 @@ Design decisions worth knowing:
   reconnect the backend, reconcile.
 * **Stacking fights are bounded:** at most five `refresh()` calls per ten seconds, then one per ten
   seconds with a single warning; `doctor` reports the count.
-* **Per-display assignment:** the configuration, reconciler and engine already handle it; the
-  D-Bus API accepts only `*` until v0.5.0, where the per-display path is enabled and tested.
+* **Per-display assignment** (enabled in v0.5.0): a display id keys an override in `[displays]`;
+  a display without an override follows `[all_displays]`.
 
 ### Configuration
 
@@ -301,6 +301,49 @@ uses zbus's own executor threads and talks to its tokio engine through channels.
 
 `lucernactl` is a blocking client: text or `--json` output, meaningful exit codes, `doctor` that
 works with or without a daemon and never modifies anything.
+
+## Multi-monitor and pause policies (implemented in v0.5.0)
+
+**Identity.** Assignments are keyed by the stable display id (EDID-based, connector fallback), never
+by position, so a different enumeration order changes nothing. A configured display that is
+unplugged is listed with `connected = false` and its last-seen label; nothing runs for it and its
+assignment is kept. When the id reappears, the reconciler creates its surface and renderer again,
+without touching the other displays.
+
+**Hotplug.** The backend debounces RandR changes (500 ms) into one `OutputsChanged`; the engine
+re-enumerates and reconciles: new displays get renderers, removed ones lose theirs, moved or
+resized ones get their surface resized (mpv follows its parent window, so no restart), and only a
+change of launch-time options (file, hardware decoding, FPS cap, audio) restarts a renderer.
+
+**Pause policy** (`lucerna-core::policy`, pure). A renderer is paused if any reason holds:
+
+| Reason | When |
+| --- | --- |
+| `user` | `Pause` was called and `Resume` has not been |
+| `lock` | the screen is locked and `pause_on_lock` is on |
+| `fullscreen` | `pause_on_fullscreen` is on and a fullscreen window covers **this** display |
+
+Reasons combine (`Resume` clears only the user's), and a renderer created while a reason holds
+starts paused (`--pause=yes`), so no frame of motion is shown behind a lock screen or a fullscreen
+window. Maximised windows never pause anything.
+
+**Per-monitor fullscreen.** The backend reports the rectangles of visible fullscreen windows on the
+current workspace; a display is occluded when one rectangle covers at least 90 % of it, so a window
+spanning two displays pauses both and a window on one pauses only that one. *Limitation (D13):*
+detection uses EWMH only (`_NET_CLIENT_LIST` and `_NET_WM_STATE_FULLSCREEN`); fullscreen windows
+that bypass the window manager (override-redirect, some old games) are not detected. If the window
+manager publishes neither atom, `fullscreen_detection` is false and the setting has no effect;
+`lucernactl status` says so.
+
+**Screen lock detection** probes, in order, and uses the first that answers: the session bus
+`org.cinnamon.ScreenSaver` (`GetActive`, `ActiveChanged`), then `org.freedesktop.ScreenSaver`, then
+logind's `LockedHint` for `XDG_SESSION_ID` on the system bus. If none exists, `lock_detection` is
+false and `pause_on_lock` has no effect (a lock screen hides the wallpaper anyway, so the cost is
+only power). Which source was used appears in `doctor`.
+
+**Stacking watchdog.** `StackingDisturbed` events trigger `refresh()`, at most five per ten seconds,
+then one per ten seconds with a single warning; the count of suppressed requests is reported by
+`doctor` as `restack.fights`.
 
 ## GTK control application (implemented in v0.4.0)
 
@@ -327,7 +370,7 @@ Closing the window never stops the wallpaper - the daemon owns it.
 * **Pages.** Wallpapers (library list, *Add…* with a file chooser filtered to videos and animated
   images, *Remove from library* with a confirmation that the file is kept, *Set on all displays*,
   *Stop wallpaper*, a "Missing" badge); Displays (the all-displays wallpaper and scaling, and the
-  detected displays with readable labels; per-display choice arrives in v0.5.0); Settings (autostart,
+  detected displays with readable labels, each with its own wallpaper and scaling choice, from v0.5.0); Settings (autostart,
   pause when fullscreen / locked, hardware decoding, FPS limit, audio behind a confirmation,
   window stacking under *Advanced*); About (name, version from the workspace, description, license,
   repository, runtime backend).
@@ -351,4 +394,5 @@ and the page updates, errors reach the banner, and the GUI notices the daemon le
 | X11 backend: RandR, surfaces, hints, click-through, restack, events, Cinnamon/Nemo probes | implemented (v0.2.0) - protocol-tested under Xvfb; **desktop appearance: MANUAL VALIDATION REQUIRED** |
 | Daemon, D-Bus API, CLI, configuration, state, diagnostics, single instance, clean shutdown | implemented (v0.3.0) |
 | GTK control application: pages, daemon control, error banner | implemented (v0.4.0) — structure tested under Xvfb; **visual quality NOT VALIDATED ON DEVELOPMENT SERVER** |
-| Per-display assignment and lock pause in the API, lifecycle polish, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
+| Per-display assignments, hotplug and absent-display restoration, per-monitor fullscreen pause, screen-lock pause | implemented (v0.5.0) — logic tested; **real-desktop behaviour MANUAL VALIDATION REQUIRED** (LUC-T09, T12, T13) |
+| Lifecycle polish, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |

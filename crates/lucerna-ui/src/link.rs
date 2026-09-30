@@ -9,7 +9,6 @@ use std::pin::Pin;
 use futures_util::stream::{self, Stream, StreamExt};
 use lucerna_ipc::dto::{DisplayDto, SettingsDto, SettingsPatch, StatusDto, WallpaperDto};
 use lucerna_ipc::error::is_daemon_absent;
-use lucerna_ipc::names::ALL_DISPLAYS;
 use lucerna_ipc::{LucernaError, LucernaProxy};
 
 /// Why a call failed, already worded for the user.
@@ -109,17 +108,19 @@ impl DaemonLink {
         Ok(self.proxy.remove_wallpaper(id).await?)
     }
 
-    /// Play `id` on all displays.
-    pub async fn set_wallpaper_everywhere(&self, id: &str) -> Result<()> {
-        Ok(self.proxy.set_wallpaper(id, ALL_DISPLAYS).await?)
+    /// Play `id` on `display` (a display id, or `*` for all displays).
+    pub async fn set_wallpaper(&self, id: &str, display: &str) -> Result<()> {
+        Ok(self.proxy.set_wallpaper(id, display).await?)
     }
 
-    pub async fn clear_wallpaper_everywhere(&self) -> Result<()> {
-        Ok(self.proxy.clear_assignment(ALL_DISPLAYS).await?)
+    /// Remove the assignment of `display` (`*` for the all-displays one).
+    pub async fn clear_wallpaper(&self, display: &str) -> Result<()> {
+        Ok(self.proxy.clear_assignment(display).await?)
     }
 
-    pub async fn set_scaling_everywhere(&self, mode: &str) -> Result<()> {
-        Ok(self.proxy.set_scaling(ALL_DISPLAYS, mode).await?)
+    /// Set the scaling of `display`; `inherit` (one display only) follows the all-displays mode.
+    pub async fn set_scaling(&self, display: &str, mode: &str) -> Result<()> {
+        Ok(self.proxy.set_scaling(display, mode).await?)
     }
 
     pub async fn apply_settings(&self, patch: &SettingsPatch) -> Result<()> {

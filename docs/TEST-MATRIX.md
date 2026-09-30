@@ -45,6 +45,13 @@ Test locations: unit tests live next to the code (`crates/*/src`); integration s
 | Connection loss and reconnect (§35) | `x11_protocol::connection_lost_and_reconnect`; `process_lifecycle::the_display_going_away_shuts_the_daemon_down_cleanly` |
 | mpv embeds in a surface (§9) — **protocol only** | `x11_protocol::mpv_embeds_into_surface` |
 | Pause policy (§15) | `policy::tests` (all combinations) |
+| Per-display assignment and scaling (§13) | `multi_monitor::each_display_can_have_its_own_wallpaper_and_scaling`; `plan::tests`; `daemon_integration::bad_requests_…` |
+| Absent display preserved and restored (§12) | `multi_monitor::an_absent_display_keeps_its_assignment_and_gets_it_back` |
+| Identity independent of enumeration order (§12) | `multi_monitor::display_identities_survive_a_different_enumeration_order`; `identity::tests` |
+| Resize on geometry change | `multi_monitor::a_geometry_change_resizes_the_surface_without_restarting` |
+| Fullscreen pauses only the covered monitor (§15) | `multi_monitor::{fullscreen_pauses_only_the_occluded_monitor, the_fullscreen_setting_can_be_turned_off_…}`; `geometry::tests` |
+| Lock pause via three sources (§15) | `multi_monitor::{the_cinnamon_screensaver_…, the_freedesktop_screensaver_…, logind_locked_hint_…, without_any_lock_service_…, a_session_that_starts_locked_…, pause_reasons_combine_…}` |
+| No restack fight (§14) | `multi_monitor::a_restack_fight_with_the_window_manager_is_rate_limited` |
 | Reconciliation (hotplug, reassignment, missing file) | `plan::tests` |
 | Session classification, Wayland detection (§50) | `session::tests`; `daemon_integration::a_wayland_session_is_reported_clearly_and_starts_nothing`; `process_lifecycle::a_wayland_session_is_explained_not_crashed_on` |
 | D-Bus API, DTO round trips, errors and exit codes (§19, §20) | `lucerna-ipc` unit tests; `daemon_integration`; `cli_e2e` |

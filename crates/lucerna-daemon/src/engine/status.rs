@@ -161,6 +161,7 @@ impl Engine {
                     wallpaper_id: wallpaper.map(|w| w.as_str().to_owned()).unwrap_or_default(),
                     wallpaper_source: source.as_str().to_owned(),
                     scaling: config.effective_scaling(&o.id).as_str().to_owned(),
+                    scaling_source: scaling_source(config, &o.id),
                 }
             })
             .collect();
@@ -182,6 +183,7 @@ impl Engine {
                 wallpaper_id: wallpaper.map(|w| w.as_str().to_owned()).unwrap_or_default(),
                 wallpaper_source: source.as_str().to_owned(),
                 scaling: config.effective_scaling(id).as_str().to_owned(),
+                scaling_source: scaling_source(config, id),
                 ..DisplayDto::default()
             });
         }
@@ -297,6 +299,15 @@ impl Engine {
             .await;
         }
     }
+}
+
+fn scaling_source(config: &lucerna_core::config::Config, id: &OutputId) -> String {
+    if config.displays.get(id).is_some_and(|d| d.scaling.is_some()) {
+        "display"
+    } else {
+        "all"
+    }
+    .to_owned()
 }
 
 fn failed(base: RendererDto, reason: &FailureReason) -> RendererDto {

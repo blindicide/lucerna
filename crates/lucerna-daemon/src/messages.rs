@@ -65,7 +65,6 @@ pub enum EngineMsg {
     Backend(BackendEvent),
     Renderer(SupervisorEvent),
     /// The screen locked (`true`) or unlocked (`false`). Sent by the lock monitor.
-    #[allow(dead_code)]
     Lock(bool),
     /// A termination signal arrived.
     Signal(&'static str),

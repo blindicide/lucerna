@@ -10,6 +10,8 @@ pub struct SessionEnv {
     pub display: Option<String>,
     pub xdg_current_desktop: Option<String>,
     pub desktop_session: Option<String>,
+    /// `XDG_SESSION_ID`, used to find this session in logind.
+    pub xdg_session_id: Option<String>,
 }
 
 fn non_empty(value: Option<OsString>) -> Option<String> {
@@ -30,6 +32,7 @@ impl SessionEnv {
             display: non_empty(get("DISPLAY")),
             xdg_current_desktop: non_empty(get("XDG_CURRENT_DESKTOP")),
             desktop_session: non_empty(get("DESKTOP_SESSION")),
+            xdg_session_id: non_empty(get("XDG_SESSION_ID")),
         }
     }
 }
