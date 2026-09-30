@@ -218,10 +218,33 @@ thread, so the usual caveat does not bite.
 
 None of this says anything about how a wallpaper *looks*; that is the manual acceptance campaign.
 
+## X11 backend (implemented in v0.2.0)
+
+`lucerna-x11` implements `WallpaperBackend` (`lucerna-core::backend`): `probe`,
+`enumerate_outputs`, `create_surface`, `resize_surface`, `destroy_surface`, `refresh`,
+`subscribe`, `diagnostics`, `shutdown`. The daemon will hold a `Box<dyn WallpaperBackend>` and can
+never name an X11 type; the GUI cannot link the backend at all. `lucerna_core::testing::FakeBackend`
+lets daemon policy be tested without an X server.
+
+* **Threads.** `subscribe` starts a *reader* thread blocked in `wait_for_event` and a *processor*
+  thread that sleeps until the next debounce deadline (RandR 500 ms, fullscreen 150 ms, stacking
+  100 ms). An idle desktop costs no wake-ups. Shutdown wakes the reader through an event sent to a
+  private window.
+* **Events** delivered to the sink: `OutputsChanged`, `FullscreenChanged(rects)`,
+  `StackingDisturbed`, `ConnectionLost`.
+* **Kind.** `cinnamon-x11` when `XDG_CURRENT_DESKTOP` contains Cinnamon or the window manager is
+  Muffin, otherwise `x11-ewmh` (best effort, not an acceptance target).
+* **Doctor.** `lucerna_x11::probe_display` connects, describes the session and disconnects
+  without creating anything.
+
+What the design assumes about Cinnamon and Nemo, and how to check each assumption, is in
+`docs/X11-CINNAMON-NOTES.md`. The manual desktop campaign is `docs/MANUAL-ACCEPTANCE.md`.
+
 ## Status by area
 
 | Area | Status |
 | --- | --- |
 | Workspace, logging, version, headless-safe binaries | implemented (v0.0.1) |
 | Renderer core: argument builder, state machine, supervision, stale recovery | implemented (v0.1.0) |
-| X11 backend, daemon, D-Bus, GUI, policies, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
+| X11 backend: RandR, surfaces, hints, click-through, restack, events, Cinnamon/Nemo probes | implemented (v0.2.0) - protocol-tested under Xvfb; **desktop appearance: MANUAL VALIDATION REQUIRED** |
+| Daemon, D-Bus, GUI, policies, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
