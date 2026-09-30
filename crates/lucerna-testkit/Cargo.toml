@@ -12,8 +12,11 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-lucerna-core.workspace = true
+lucerna-core = { workspace = true, features = ["test-support"] }
 lucerna-mpv.workspace = true
+lucerna-x11.workspace = true
+rustix.workspace = true
+x11rb = { workspace = true, features = ["randr", "shape", "xtest"] }
 lucerna-daemon.workspace = true
 lucerna-cli.workspace = true
 serde_json.workspace = true

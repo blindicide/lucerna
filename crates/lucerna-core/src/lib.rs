@@ -6,10 +6,14 @@
 pub mod backend;
 pub mod bounded_log;
 pub mod fsutil;
+pub mod geometry;
+pub mod identity;
 pub mod logging;
 pub mod mpv;
 pub mod paths;
 pub mod renderer;
 pub mod runtime;
+#[cfg(feature = "test-support")]
+pub mod testing;
 pub mod types;
 pub mod version;

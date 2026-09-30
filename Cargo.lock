@@ -337,6 +337,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gethostname"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bd49230192a3797a9a4d6abe9b3eed6f7fa4c8a8a4947977c6f80025f92cbd8"
+dependencies = [
+ "rustix",
+ "windows-link",
+]
+
+[[package]]
 name = "gio"
 version = "0.22.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -593,7 +603,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "lucerna-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "lucerna-core",
@@ -603,9 +613,11 @@ dependencies = [
 
 [[package]]
 name = "lucerna-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "dirs",
+ "serde",
+ "serde_json",
  "thiserror",
  "tracing",
  "tracing-subscriber",
@@ -613,7 +625,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-daemon"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -626,14 +638,14 @@ dependencies = [
 
 [[package]]
 name = "lucerna-ipc"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lucerna-core",
 ]
 
 [[package]]
 name = "lucerna-mpv"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lucerna-core",
  "rustix",
@@ -646,21 +658,24 @@ dependencies = [
 
 [[package]]
 name = "lucerna-testkit"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lucerna-cli",
  "lucerna-core",
  "lucerna-daemon",
  "lucerna-mpv",
+ "lucerna-x11",
+ "rustix",
  "serde_json",
  "signal-hook",
  "tokio",
  "toml",
+ "x11rb",
 ]
 
 [[package]]
 name = "lucerna-ui"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "clap",
  "gtk4",
@@ -671,9 +686,13 @@ dependencies = [
 
 [[package]]
 name = "lucerna-x11"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lucerna-core",
+ "serde",
+ "serde_json",
+ "tracing",
+ "x11rb",
 ]
 
 [[package]]
@@ -1226,6 +1245,23 @@ checksum = "23b97319f7b8343df12cc98938e5c3eb436064524c8d2b4e30a1d3a36eecdf81"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "x11rb"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a8885a854a8bfdf87a301e53e41b17c5f8f33639903131338b997b1eb614f44"
+dependencies = [
+ "gethostname",
+ "rustix",
+ "x11rb-protocol",
+]
+
+[[package]]
+name = "x11rb-protocol"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acf4d1bc32aa46eec18caa634ec3cf4c05bfa151f12b93b510b15190f69a1ca8"
 
 [[package]]
 name = "zmij"
