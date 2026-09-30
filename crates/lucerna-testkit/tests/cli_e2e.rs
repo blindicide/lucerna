@@ -369,3 +369,99 @@ async fn doctor_redact_hides_the_home_directory_and_user_name() {
     let report: serde_json::Value = serde_json::from_str(&redacted.stdout).unwrap();
     assert_eq!(report["config"]["file"], "~/.config/lucerna/config.toml");
 }
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_corrupt_configuration_is_explained_by_status_and_doctor() {
+    let Some(f) = Fixture::start_with(
+        "cli-corrupt",
+        lucerna_testkit::fixture::Setup {
+            config_toml: Some("this is [not valid".to_owned()),
+            ..Default::default()
+        },
+    )
+    .await
+    else {
+        return;
+    };
+    f.ready().await;
+    let (bus, root) = (f.bus.address.clone(), f.env.root.clone());
+
+    let status = ctl(&bus, &root, &["status"]).await;
+    assert_eq!(status.code, 0, "{}", status.stderr);
+    assert!(
+        status
+            .stdout
+            .contains("Config:    defaults-after-corruption"),
+        "{}",
+        status.stdout
+    );
+    assert!(
+        status.stdout.contains("could not be parsed")
+            && status.stdout.contains("config.toml.corrupt-"),
+        "the notice names what was done with the file: {}",
+        status.stdout
+    );
+
+    let json: serde_json::Value =
+        serde_json::from_str(&ctl(&bus, &root, &["status", "--json"]).await.stdout).unwrap();
+    assert_eq!(json["config_state"], "defaults-after-corruption");
+
+    let doctor: serde_json::Value =
+        serde_json::from_str(&ctl(&bus, &root, &["doctor", "--json"]).await.stdout).unwrap();
+    assert_eq!(
+        doctor["daemon"]["diagnostics"]["config"]["state"],
+        "defaults-after-corruption"
+    );
+    assert!(
+        doctor["daemon"]["diagnostics"]["config"]["notice"]
+            .as_str()
+            .unwrap()
+            .contains("kept as"),
+        "{doctor}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_missing_mpv_is_explained_by_status() {
+    let Some(f) = Fixture::start_with(
+        "cli-no-mpv",
+        lucerna_testkit::fixture::Setup {
+            mpv_override: Some("/nonexistent/mpv".into()),
+            ..Default::default()
+        },
+    )
+    .await
+    else {
+        return;
+    };
+    f.ready().await;
+    let (bus, root) = (f.bus.address.clone(), f.env.root.clone());
+    let status = ctl(&bus, &root, &["status"]).await;
+    assert!(
+        status.stdout.contains("mpv:       NOT FOUND"),
+        "{}",
+        status.stdout
+    );
+
+    // `play` adds the file and assigns it; the renderer then reports the actionable message.
+    let media = f.env.media("clip.mp4", "play");
+    assert_eq!(
+        ctl(&bus, &root, &["play", media.to_str().unwrap()])
+            .await
+            .code,
+        0
+    );
+    f.wait_status("mpv-missing", |s| {
+        s.renderers
+            .first()
+            .is_some_and(|r| r.failure_code == "mpv-missing")
+    })
+    .await;
+    let status = ctl(&bus, &root, &["status"]).await;
+    assert!(
+        status.stdout.contains("Lucerna could not start mpv."),
+        "{}",
+        status.stdout
+    );
+    assert!(status.stdout.contains("Install mpv"), "{}", status.stdout);
+}

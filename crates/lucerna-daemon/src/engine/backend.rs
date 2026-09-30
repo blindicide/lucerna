@@ -111,6 +111,9 @@ impl Engine {
         match probed {
             Ok(probe) => {
                 tracing::info!(backend = probe.kind.as_str(), "backend selected");
+                if !self.backend_injected {
+                    self.wait_for_window_manager().await;
+                }
                 self.backend_status = BackendStatus::Available {
                     kind: probe.kind,
                     capabilities: probe.capabilities,
@@ -174,6 +177,37 @@ impl Engine {
                 display: String::new(),
                 reason: err.to_string(),
             }),
+        }
+    }
+
+    /// At login the daemon can start before the window manager. Wait (bounded) so the first
+    /// surfaces are created after it; a bare X server without one simply times out (§22).
+    async fn wait_for_window_manager(&mut self) {
+        let deadline = StdInstant::now() + self.opts.display_wait;
+        let mut announced = false;
+        loop {
+            let waiting = self
+                .backend
+                .as_mut()
+                .and_then(|b| b.probe().ok())
+                .is_some_and(|probe| {
+                    probe
+                        .facts
+                        .get("window_manager")
+                        .is_some_and(serde_json::Value::is_null)
+                });
+            if !waiting {
+                return;
+            }
+            if StdInstant::now() >= deadline {
+                tracing::warn!("no window manager appeared; creating wallpaper surfaces anyway");
+                return;
+            }
+            if !announced {
+                tracing::info!("waiting for the window manager to start");
+                announced = true;
+            }
+            tokio::time::sleep(Duration::from_millis(200)).await;
         }
     }
 

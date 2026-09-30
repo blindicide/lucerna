@@ -299,6 +299,7 @@ impl Actor {
     fn on_internal(&mut self, internal: Internal) {
         match internal {
             Internal::ChildExited { generation, exit } => {
+                tracing::info!(output = %self.cfg.output, generation, %exit, "renderer exited");
                 if self
                     .child
                     .as_ref()
