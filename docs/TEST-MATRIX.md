@@ -77,7 +77,9 @@ Test locations: unit tests live next to the code (`crates/*/src`); integration s
 | Requests during shutdown cannot hang it | `daemon_integration::calls_that_arrive_during_shutdown_…` |
 | Packages install, dependencies resolve, binaries/desktop file/icon exist, `--version`/`--help` headless, removal keeps config (§35) | `scripts/smoke-test-package.sh` in fresh `ubuntu:24.04` / `fedora:44` containers (`packages.yml`: `deb-smoke`, `rpm-smoke`) |
 | Package helper scripts | `tests/scripts/packaging_test.sh`, `tests/scripts/version_test.sh` |
-| Release pipeline (§40) | added in v0.8.0 |
+| Release tag is annotated, equals the workspace version, has a changelog section (§40 steps 2-4) | `tests/scripts/release_test.sh` (pass, mismatch, lightweight, missing, empty-changelog cases in a throwaway repo); enforced by `release.yml` `verify` |
+| Release pipeline (§40): tag → CI suite → packages → source archive → SHA-256 → GitHub Release | `.github/workflows/release.yml`, linted with `actionlint`; **first real execution is the `v0.8.0` tag run** (result recorded in the release itself) |
+| Release never publishes a partial set | `release.yml`: `publish` needs `ci`, `packages`, `source`, and asserts the exact artifact list before `sha256sum -c` |
 
 ## Desktop-only (not automatable on the server)
 

@@ -6,6 +6,24 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-30
+
+### Added
+- Automated releases. Pushing a `v*` tag runs the `release` workflow, which checks out the exact
+  tag, verifies it is annotated and equals the Cargo workspace version, runs the full CI suite,
+  builds and smoke-tests the `.deb` and `.rpm`, makes the source archive, writes `SHA256SUMS`, and
+  creates the GitHub Release (a pre-release for `-rc` versions) with the notes taken from this
+  changelog and all four files attached.
+- `scripts/check-tag.sh` and `scripts/changelog-section.sh`, with `tests/scripts/release_test.sh`.
+
+### Changed
+- A release is published only if every job succeeds; a failed package build produces no release.
+  A mismatching tag fails the run instead of rewriting package metadata.
+
+### Notes
+- Packages built by the pipeline are unsigned; `SHA256SUMS` protects against corrupted downloads
+  only.
+
 ## [0.7.0] - 2026-09-30
 
 ### Added
