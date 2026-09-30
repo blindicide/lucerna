@@ -68,6 +68,8 @@ impl World {
             .env("XDG_CURRENT_DESKTOP", "X-Cinnamon")
             .env("LUCERNA_MPV", fake_mpv_path())
             .env("LUCERNA_LOG", "lucerna=debug")
+            // A bare Xvfb has no window manager; do not sit out the 10 s login wait in every test.
+            .env("LUCERNA_DISPLAY_WAIT_MS", "300")
             .env("RUST_BACKTRACE", "1")
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
@@ -178,7 +180,15 @@ fn signal(child: &Child, sig: rustix::process::Signal) {
 }
 
 async fn start_playing(world: &World, proxy: &LucernaProxy<'_>) -> (PathBuf, u64) {
-    let media = world.env.media("clip.mp4", "play");
+    start_playing_with(world, proxy, "play").await
+}
+
+async fn start_playing_with(
+    world: &World,
+    proxy: &LucernaProxy<'_>,
+    directives: &str,
+) -> (PathBuf, u64) {
+    let media = world.env.media("clip.mp4", directives);
     let id = proxy
         .add_wallpaper(media.to_str().unwrap(), "")
         .await
@@ -372,4 +382,283 @@ async fn no_session_bus_gives_a_readable_error_not_a_panic() {
         "it says what to do: {err}"
     );
     assert!(!err.contains("panicked"));
+}
+
+// ------------------------------------------------------------------------ logout and crashes
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn sighup_ends_the_session_cleanly() {
+    // Logout delivers SIGHUP to the session's processes.
+    let world = world!("sighup", true);
+    let mut daemon = world.command("x11").spawn().unwrap();
+    let (_conn, proxy) = world.proxy().await;
+    wait_ready(&proxy).await;
+    let (_media, mpv_pid) = start_playing(&world, &proxy).await;
+
+    signal(&daemon, rustix::process::Signal::HUP);
+    assert_eq!(exit_code(&mut daemon).await, 0);
+    assert!(!pid_alive(mpv_pid));
+    assert!(world.x_children().is_empty());
+    assert_runtime_clean(&world.runtime);
+    assert!(name_is_free(&proxy).await);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn when_the_daemon_is_killed_the_kernel_stops_its_renderer() {
+    // Defence in depth: PR_SET_PDEATHSIG makes mpv follow its parent even without cleanup code.
+    let world = world!("sigkill-pdeath", true);
+    let mut daemon = world.command("x11").spawn().unwrap();
+    let (_conn, proxy) = world.proxy().await;
+    wait_ready(&proxy).await;
+    let (_media, mpv_pid) = start_playing(&world, &proxy).await;
+
+    signal(&daemon, rustix::process::Signal::KILL);
+    let _ = daemon.wait().await;
+    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    while pid_alive(mpv_pid) && std::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    assert!(
+        !pid_alive(mpv_pid),
+        "the renderer must not outlive a killed daemon"
+    );
+    // X destroys the windows of a client that vanished.
+    assert!(world.wallpaper_windows().is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_renderer_that_survives_a_killed_daemon_is_recovered_by_the_next_one() {
+    let world = world!("sigkill-recover", true);
+    let mut first = world.command("x11").spawn().unwrap();
+    let (_conn, proxy) = world.proxy().await;
+    wait_ready(&proxy).await;
+    // This fake mpv ignores SIGTERM, so it survives the death of its parent.
+    let (media, old_pid) = start_playing_with(&world, &proxy, "ignore-term; ignore-quit").await;
+
+    signal(&first, rustix::process::Signal::KILL);
+    let _ = first.wait().await;
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    assert!(
+        pid_alive(old_pid),
+        "the orphan survived (it ignores SIGTERM)"
+    );
+    let registry = std::fs::read_to_string(world.runtime.join("lucerna/renderers.json")).unwrap();
+    assert!(
+        registry.contains(&old_pid.to_string()),
+        "the registry names the orphan: {registry}"
+    );
+
+    // The next daemon finds it by pid, start time, executable and socket, and removes it.
+    let mut second = world.command("x11").spawn().unwrap();
+    wait_ready(&proxy).await;
+    let deadline = std::time::Instant::now() + Duration::from_secs(15);
+    while pid_alive(old_pid) && std::time::Instant::now() < deadline {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(
+        !pid_alive(old_pid),
+        "stale renderer terminated by the next daemon"
+    );
+
+    // The persisted assignment is played again by a fresh renderer.
+    let status = wait_playing(&proxy).await;
+    assert_ne!(u64::from(status.renderers[0].pid), old_pid);
+    assert!(pid_alive(u64::from(status.renderers[0].pid)));
+    assert!(launches(&media).len() >= 2);
+    signal(&second, rustix::process::Signal::TERM);
+    assert_eq!(exit_code(&mut second).await, 0);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_unrelated_mpv_is_never_touched_by_recovery() {
+    let world = world!("unrelated-mpv", true);
+    // A "user's mpv" (the fake, launched by hand with its own socket) and a stale registry that
+    // names a different pid entirely.
+    let media = world.env.media("mine.mp4", "play");
+    let socket = world.env.root.join("mine.sock");
+    let mut theirs = std::process::Command::new(fake_mpv_path())
+        .arg(format!("--input-ipc-server={}", socket.display()))
+        .arg("--")
+        .arg(&media)
+        .spawn()
+        .unwrap();
+    let their_pid = u64::from(theirs.id());
+    std::fs::create_dir_all(world.runtime.join("lucerna")).unwrap();
+    std::fs::set_permissions(
+        world.runtime.join("lucerna"),
+        std::os::unix::fs::PermissionsExt::from_mode(0o700),
+    )
+    .unwrap();
+    std::fs::write(
+        world.runtime.join("lucerna/renderers.json"),
+        format!(r#"[{{"pid": {their_pid}, "starttime": 1, "socket": "{}", "output_id": "conn:X", "generation": 1}}]"#, socket.display()),
+    )
+    .unwrap();
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let mut daemon = world.command("x11").spawn().unwrap();
+    let (_conn, proxy) = world.proxy().await;
+    wait_ready(&proxy).await;
+    assert!(
+        pid_alive(their_pid),
+        "a process whose start time does not match the record is left alone"
+    );
+    signal(&daemon, rustix::process::Signal::TERM);
+    assert_eq!(exit_code(&mut daemon).await, 0);
+    theirs.kill().unwrap();
+    theirs.wait().unwrap();
+}
+
+// -------------------------------------------------------------------------------- logging
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_daemon_keeps_a_concise_bounded_log_of_the_events_that_matter() {
+    let world = world!("logfile", true);
+    let mut daemon = world.command("x11").spawn().unwrap();
+    let (_conn, proxy) = world.proxy().await;
+    wait_ready(&proxy).await;
+    let (_media, _pid) = start_playing(&world, &proxy).await;
+    proxy.pause().await.unwrap();
+    proxy.resume().await.unwrap();
+
+    let log_path = world.env.root.join("state/lucerna/logs/lucernad.log");
+    let before = std::fs::read_to_string(&log_path).unwrap();
+    // Nothing is logged per poll: hundreds of status calls add nothing.
+    for _ in 0..300 {
+        proxy.get_status().await.unwrap();
+    }
+    let after = std::fs::read_to_string(&log_path).unwrap();
+    assert_eq!(
+        before.lines().count(),
+        after.lines().count(),
+        "status polling must not log"
+    );
+
+    for event in [
+        "lucernad starting",
+        "backend selected",
+        "display detected",
+        "wallpaper assigned",
+        "starting renderer",
+        "renderer launched",
+        "renderer paused",
+        "renderer resumed",
+    ] {
+        assert!(after.contains(event), "the log lacks {event:?}:\n{after}");
+    }
+    assert!(
+        after.lines().count() < 60,
+        "concise: {} lines",
+        after.lines().count()
+    );
+
+    signal(&daemon, rustix::process::Signal::TERM);
+    assert_eq!(exit_code(&mut daemon).await, 0);
+    let final_log = std::fs::read_to_string(&log_path).unwrap();
+    assert!(
+        final_log.contains("shutting down")
+            && final_log.contains("renderer exited")
+            && final_log.contains("daemon stopped"),
+        "{final_log}"
+    );
+    assert!(std::fs::metadata(&log_path).unwrap().len() <= 512 * 1024);
+}
+
+// ------------------------------------------------------------------ the login race (window manager)
+
+fn fake_window_manager(world: &World) {
+    let (x, screen) = RustConnection::connect(Some(&world.xvfb.as_ref().unwrap().display)).unwrap();
+    let root = x.setup().roots[screen].root;
+    let intern = |name: &str| {
+        x.intern_atom(false, name.as_bytes())
+            .unwrap()
+            .reply()
+            .unwrap()
+            .atom
+    };
+    let window = x.generate_id().unwrap();
+    x.create_window(
+        0,
+        window,
+        root,
+        0,
+        0,
+        1,
+        1,
+        0,
+        x11rb::protocol::xproto::WindowClass::INPUT_OUTPUT,
+        0,
+        &x11rb::protocol::xproto::CreateWindowAux::new(),
+    )
+    .unwrap();
+    let check = intern("_NET_SUPPORTING_WM_CHECK");
+    use x11rb::wrapper::ConnectionExt as _;
+    x.change_property32(
+        x11rb::protocol::xproto::PropMode::REPLACE,
+        root,
+        check,
+        x11rb::protocol::xproto::AtomEnum::WINDOW,
+        &[window],
+    )
+    .unwrap();
+    x.change_property8(
+        x11rb::protocol::xproto::PropMode::REPLACE,
+        window,
+        intern("_NET_WM_NAME"),
+        intern("UTF8_STRING"),
+        b"Muffin",
+    )
+    .unwrap();
+    x.flush().unwrap();
+    // Keep the connection (and so the window) alive for a while.
+    std::mem::forget(x);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_daemon_waits_for_the_window_manager_before_creating_surfaces() {
+    let world = world!("wm-wait", true);
+    let mut daemon = world
+        .command("x11")
+        .env("LUCERNA_DISPLAY_WAIT_MS", "8000")
+        .spawn()
+        .unwrap();
+    let (_conn, proxy) = world.proxy().await;
+
+    // The daemon serves D-Bus immediately but is still waiting to pick its backend's surfaces up:
+    // give it a moment, then the window manager "starts".
+    tokio::time::sleep(Duration::from_millis(800)).await;
+    let started = std::time::Instant::now();
+    fake_window_manager(&world);
+    let status = wait_ready(&proxy).await;
+    assert!(
+        started.elapsed() < Duration::from_secs(6),
+        "it did not sit out the whole wait once the window manager appeared"
+    );
+    assert!(status.supported);
+    assert_eq!(status.backend, "cinnamon-x11", "Muffin was recognised");
+
+    signal(&daemon, rustix::process::Signal::TERM);
+    assert_eq!(exit_code(&mut daemon).await, 0);
+    let log =
+        std::fs::read_to_string(world.env.root.join("state/lucerna/logs/lucernad.log")).unwrap();
+    assert!(log.contains("waiting for the window manager"), "{log}");
+    assert!(!log.contains("no window manager appeared"), "{log}");
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn without_a_window_manager_the_wait_is_bounded() {
+    let world = world!("wm-timeout", true);
+    let mut daemon = world
+        .command("x11")
+        .env("LUCERNA_DISPLAY_WAIT_MS", "700")
+        .spawn()
+        .unwrap();
+    let (_conn, proxy) = world.proxy().await;
+    let status = wait_ready(&proxy).await;
+    assert!(status.supported, "a bare X server still works");
+    signal(&daemon, rustix::process::Signal::TERM);
+    assert_eq!(exit_code(&mut daemon).await, 0);
+    let log =
+        std::fs::read_to_string(world.env.root.join("state/lucerna/logs/lucernad.log")).unwrap();
+    assert!(log.contains("no window manager appeared"), "{log}");
 }
