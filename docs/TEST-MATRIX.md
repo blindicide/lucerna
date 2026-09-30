@@ -56,6 +56,10 @@ Test locations: unit tests live next to the code (`crates/*/src`); integration s
 | Clean shutdown on SIGTERM / Quit / logout (§52) | `process_lifecycle::{sigterm_cleans_up_everything, quit_cleans_up_everything, the_display_going_away_…}` |
 | Config reload (§35) | `daemon_integration::reload_applies_an_external_edit` |
 | Corrupt / newer config handling (§30 v0.6.0) | `daemon_integration::{a_corrupt_config_is_moved_aside_…, a_newer_config_schema_is_read_only_but_still_renders}` |
+| GUI structure: pages, controls, wiring to the daemon (§23) — **structure only, not appearance** | `crates/lucerna-ui/tests/ui_structure.rs` (real GTK window on Xvfb + real daemon on a private bus) |
+| GUI view models and strings (§23, §48) | `lucerna-ui presenter::{wallpapers,displays,settings,banner,about}::tests` |
+| GUI never owns renderers or X11 windows (§5, §48) | `architecture::dependency_edges_follow_the_allow_table` (ui may not depend on mpv/x11) |
+| Requests during shutdown cannot hang it | `daemon_integration::calls_that_arrive_during_shutdown_…` |
 | Packaging (§35, §36) | added in v0.7.0 / v0.8.0 |
 
 ## Desktop-only (not automatable on the server)
@@ -65,7 +69,7 @@ Each of these is `IMPLEMENTED — MANUAL DESKTOP VALIDATION REQUIRED`, result `N
 | Behaviour | Manual test |
 | --- | --- |
 | Installation and menu entry | LUC-T01 |
-| GUI appears, responsive, no terminal | LUC-T02 |
+| GUI appears, responsive, no terminal; layout, fonts and theming look right (**not validated on the server**) | LUC-T02 |
 | Add wallpaper in the GUI | LUC-T03 |
 | Animation appears as the desktop background | LUC-T04 |
 | Icons visible, clickable, draggable | LUC-T05 |

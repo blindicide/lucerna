@@ -13,9 +13,10 @@ command-line controller, installed from native `.deb` and `.rpm` packages.
 
 **Development status: pre-release (`0.x`).** This repository is being built milestone by
 milestone toward `v1.0.0-rc.1` (see [CHANGELOG.md](CHANGELOG.md)). Today the background service
-(`lucernad`) and the command-line controller (`lucernactl`) work end to end: renderer
-supervision, the Cinnamon/X11 backend, configuration, the D-Bus API and diagnostics. The GTK
-control application is still a stub. **Nothing has been validated on a real desktop yet.**
+(`lucernad`), the command-line controller (`lucernactl`) and the GTK control application
+(`lucerna`) work end to end: renderer supervision, the Cinnamon/X11 backend, configuration, the
+D-Bus API, diagnostics and the four-page GUI. **Nothing has been validated on a real desktop
+yet: the GUI's look and the wallpaper's behaviour under Cinnamon are unverified.**
 
 > Lucerna is developed on a headless server. Automated tests cover logic, process
 > supervision, D-Bus and X11 *protocol* behaviour. Nothing about how the wallpaper *looks* or
