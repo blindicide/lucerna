@@ -11,8 +11,14 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Test doubles (FakeBackend, ManualClock) for the daemon and testkit. Never enabled in shipped binaries.
+test-support = []
+
 [dependencies]
 dirs.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
