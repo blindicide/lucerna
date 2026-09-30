@@ -281,6 +281,71 @@ fn child() -> ExitCode {
         controller.snapshot().displays.len() == 2
     });
 
+    // Per-display rows: a wallpaper and a scaling mode for one display only.
+    until("two display rows", || {
+        main.displays.list().row_at_index(1).is_some()
+    });
+    let row_of = |connector: &str| {
+        let snapshot = controller.snapshot();
+        let rows = lucerna_ui::presenter::displays::rows(&snapshot.displays, &snapshot.wallpapers);
+        let id = snapshot
+            .displays
+            .iter()
+            .find(|d| d.connector == connector)
+            .unwrap()
+            .id
+            .clone();
+        rows.iter().position(|r| r.id == id).unwrap()
+    };
+    let edp = row_of("eDP-1");
+    let (wallpaper_choice, scaling_choice) = main.displays.row_controls(edp).expect("row controls");
+    assert_eq!(
+        wallpaper_choice.selected(),
+        0,
+        "starts as 'same as all displays'"
+    );
+    assert_eq!(scaling_choice.selected(), 0);
+    wallpaper_choice.set_selected(1); // as if the user picked the wallpaper for this display
+    until("the per-display assignment to reach the daemon", || {
+        controller
+            .snapshot()
+            .displays
+            .iter()
+            .any(|d| d.connector == "eDP-1" && d.wallpaper_source == "display")
+    });
+    scaling_choice.set_selected(4); // Center
+    until("the per-display scaling to reach the daemon", || {
+        controller.snapshot().displays.iter().any(|d| {
+            d.connector == "eDP-1" && d.scaling == "center" && d.scaling_source == "display"
+        })
+    });
+    let hdmi = controller
+        .snapshot()
+        .displays
+        .into_iter()
+        .find(|d| d.connector == "HDMI-1")
+        .unwrap();
+    assert_eq!(
+        (hdmi.wallpaper_source.as_str(), hdmi.scaling_source.as_str()),
+        ("all", "all"),
+        "the other display is untouched"
+    );
+    // The rebuilt row shows the override.
+    let edp = row_of("eDP-1");
+    let (wallpaper_choice, scaling_choice) = main.displays.row_controls(edp).expect("row controls");
+    assert_eq!(
+        (wallpaper_choice.selected(), scaling_choice.selected()),
+        (1, 4)
+    );
+    scaling_choice.set_selected(0); // back to "same as all displays"
+    until("the override to be removed", || {
+        controller
+            .snapshot()
+            .displays
+            .iter()
+            .any(|d| d.connector == "eDP-1" && d.scaling_source == "all")
+    });
+
     // Reflect the state honestly: with mpv missing the renderer is failed and no surface exists.
     until("the failed renderer to be reported", || {
         controller.snapshot().status.is_some_and(|s| {
