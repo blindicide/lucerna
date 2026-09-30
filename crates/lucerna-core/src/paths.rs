@@ -16,6 +16,8 @@ pub struct Paths {
     pub state_dir: PathBuf,
     /// `$XDG_CACHE_HOME/lucerna`
     pub cache_dir: PathBuf,
+    /// `$XDG_CONFIG_HOME/autostart` (shared with other applications).
+    pub autostart_dir: PathBuf,
     /// `$XDG_RUNTIME_DIR/lucerna`, or `None` when no safe runtime directory exists.
     pub runtime_dir: Option<PathBuf>,
 }
@@ -34,6 +36,9 @@ impl Paths {
             cache_dir: dirs::cache_dir()
                 .unwrap_or_else(|| home.join(".cache"))
                 .join(APP_DIR),
+            autostart_dir: dirs::config_dir()
+                .unwrap_or_else(|| home.join(".config"))
+                .join("autostart"),
             runtime_dir: crate::runtime::current_uid().ok().and_then(|uid| {
                 crate::runtime::resolve_base(std::env::var_os("XDG_RUNTIME_DIR"), uid)
                     .map(|base| base.join(APP_DIR))
@@ -47,6 +52,7 @@ impl Paths {
             config_dir: base.join("config").join(APP_DIR),
             state_dir: base.join("state").join(APP_DIR),
             cache_dir: base.join("cache").join(APP_DIR),
+            autostart_dir: base.join("config").join("autostart"),
             runtime_dir: Some(base.join("runtime").join(APP_DIR)),
         }
     }
@@ -54,6 +60,26 @@ impl Paths {
     /// `config.toml`
     pub fn config_file(&self) -> PathBuf {
         self.config_dir.join("config.toml")
+    }
+
+    /// `state.json`
+    pub fn state_file(&self) -> PathBuf {
+        self.state_dir.join("state.json")
+    }
+
+    /// The autostart entry.
+    pub fn autostart_file(&self) -> PathBuf {
+        self.autostart_dir.join(crate::autostart::FILE_NAME)
+    }
+
+    /// `renderers.json` in the runtime directory, if there is one.
+    pub fn registry_file(&self) -> Option<PathBuf> {
+        self.runtime_dir.as_ref().map(|d| d.join("renderers.json"))
+    }
+
+    /// `daemon.lock` in the runtime directory, if there is one.
+    pub fn lock_file(&self) -> Option<PathBuf> {
+        self.runtime_dir.as_ref().map(|d| d.join("daemon.lock"))
     }
 
     /// `logs/`
