@@ -18,6 +18,11 @@ on:
   workflow_dispatch:
   workflow_call:
     inputs:
+      ref:
+        description: "Git ref to check out; empty means the ref that triggered the run"
+        type: string
+        required: false
+        default: ""
       expected_version:
         description: "If set, fail unless the workspace version equals this"
         type: string
@@ -45,6 +50,8 @@ jobs:
             build-essential debhelper devscripts fakeroot dpkg-dev pkgconf libgtk-4-dev \
             jq git curl ca-certificates lintian desktop-file-utils appstream python3
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install the Rust toolchain (pinned by rust-toolchain.toml)
@@ -84,6 +91,8 @@ jobs:
     container: ubuntu:24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/download-artifact@v4
         with:
           name: deb
@@ -107,6 +116,8 @@ jobs:
           dnf install -y rpm-build gcc pkgconf-pkg-config gtk4-devel desktop-file-utils \
             libappstream-glib jq git curl rpmlint python3 tar gzip which
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - name: Trust the workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install the Rust toolchain (pinned by rust-toolchain.toml)
@@ -142,6 +153,8 @@ jobs:
     container: fedora:44
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/download-artifact@v4
         with:
           name: rpm
