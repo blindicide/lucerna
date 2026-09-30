@@ -51,6 +51,11 @@ panic = "warn"
 todo = "warn"
 dbg_macro = "warn"
 
+# Line tables are enough for backtraces and keep the many test binaries small (full debug info made
+# the target directory tens of gigabytes).
+[profile.dev]
+debug = "line-tables-only"
+
 [profile.release]
 lto = "thin"
 codegen-units = 4
