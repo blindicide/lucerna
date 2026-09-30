@@ -6,6 +6,45 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-30
+
+### Added
+- Per-display wallpapers and scaling. A display can override the all-displays wallpaper and
+  scaling; `SetWallpaper`, `ClearAssignment` and `SetScaling` take a display id, and
+  `lucernactl play --monitor` accepts a display id or a connector name such as `HDMI-1`. The
+  Displays page has a wallpaper and a scaling choice on each row, including "Same as all
+  displays".
+- Displays report where their scaling comes from (`scaling_source`), so clients can tell an
+  override from an inherited value.
+- Display hotplug: displays that appear get their wallpaper, displays that disappear lose only
+  their own renderer, and a display whose geometry changes has its surface resized without a
+  restart. Assignments follow the stable display identity, not the order in which the X server
+  lists monitors.
+- Absent displays keep their assignment: they are listed as disconnected with their last-seen
+  name, nothing runs for them, and their wallpaper returns automatically when they do.
+- Fullscreen pause per monitor: only the display covered by a fullscreen window pauses, a window
+  spanning two displays pauses both, and windows that merely cover part of a display or are only
+  maximised never pause anything.
+- Screen-lock pause, using the first available source among `org.cinnamon.ScreenSaver`,
+  `org.freedesktop.ScreenSaver` and logind's `LockedHint`. Pause reasons (user, lock, fullscreen)
+  combine, and a renderer created while one holds starts paused.
+- A restack watchdog with a rate limit, so Lucerna cannot fight the window manager for the
+  bottom of the window stack; suppressed requests are reported by `doctor`.
+- Multi-monitor and policy tests against the whole daemon: per-display assignments and scaling,
+  unplugging and re-plugging a display, enumeration-order independence, resizing, per-monitor
+  fullscreen, all three lock sources, combined pause reasons and the restack limit.
+
+### Fixed
+- The mpv test double could interleave the log lines of several processes writing the same file.
+- Executing a script while another thread forks no longer fails with "text file busy" (a brief
+  retry while probing mpv, which also helps while mpv is being upgraded).
+
+### Notes
+- Per-monitor fullscreen detection uses the window manager's client list only. Fullscreen windows
+  that bypass the window manager (some older games) are not detected; use `lucernactl pause`.
+- How any of this behaves on a real Cinnamon desktop (LUC-T09 fullscreen pause, LUC-T12 two
+  monitors, LUC-T13 monitor disconnect) is IMPLEMENTED — MANUAL DESKTOP VALIDATION REQUIRED.
+
 ## [0.4.0] - 2026-09-30
 
 ### Added
