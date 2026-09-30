@@ -1,15 +1,28 @@
 # Tagged releases (directive §40). The numbers are the twelve steps of the directive.
 #
 # A release is published only if EVERY mandatory job succeeds: `publish` needs all the others, so
-# a failed package build can never produce a release with a single package.
+# a failed package build can never produce a release with a single package. The GitHub Release is
+# a draft until every asset is attached and checked.
+#
+# Two ways in, both building the exact tag:
+#   * pushing a tag `v*` (the normal path);
+#   * running this workflow by hand from `main` with the name of an EXISTING tag, to finish a
+#     release whose original run failed for a reason that was fixed on `main` afterwards. Tags are
+#     never moved or recreated.
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing annotated tag to release (for example v1.0.0-rc.1)"
+        type: string
+        required: true
 
 concurrency:
-  group: release-${{ github.ref_name }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
@@ -20,27 +33,38 @@ jobs:
     name: "1-4: check out the tag, verify it is annotated and matches the version"
     runs-on: ubuntu-24.04
     outputs:
+      tag: ${{ steps.info.outputs.tag }}
       version: ${{ steps.info.outputs.version }}
       deb_version: ${{ steps.info.outputs.deb_version }}
       rpm_version: ${{ steps.info.outputs.rpm_version }}
       rpm_release: ${{ steps.info.outputs.rpm_release }}
       prerelease: ${{ steps.info.outputs.prerelease }}
     steps:
+      - name: A manual run must come from main, so only reviewed workflow code publishes
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "Run this workflow from main."
+          exit 1
       - name: 1. Check out the exact tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: refs/tags/${{ inputs.tag || github.ref_name }}
           fetch-depth: 0
       - name: Fetch the tag object itself
         # A checkout can make an annotated tag look lightweight; fetch the real tag ref.
-        run: git fetch --force origin "refs/tags/${{ github.ref_name }}:refs/tags/${{ github.ref_name }}"
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
       - name: 2-4. Annotated tag, tag equals the Cargo workspace version, changelog present
         id: info
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -eu
-          scripts/check-tag.sh "${{ github.ref_name }}"
+          scripts/check-tag.sh "$TAG"
           version="$(scripts/version.sh --semver)"
           {
+            echo "tag=$TAG"
             echo "version=$version"
             echo "deb_version=$(scripts/version.sh --deb)"
             echo "rpm_version=$(scripts/version.sh --rpm-version)"
@@ -52,12 +76,15 @@ jobs:
     name: "5-6: full test suite and release build"
     needs: verify
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: refs/tags/${{ needs.verify.outputs.tag }}
 
   packages:
     name: "7-8: build and smoke-test the .deb and the .rpm"
     needs: verify
     uses: ./.github/workflows/packages.yml
     with:
+      ref: refs/tags/${{ needs.verify.outputs.tag }}
       expected_version: ${{ needs.verify.outputs.version }}
 
   source:
@@ -67,10 +94,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: refs/tags/${{ needs.verify.outputs.tag }}
           fetch-depth: 0
       - name: Create lucerna-<version>.tar.gz from the tag
-        run: scripts/make-source-archive.sh "refs/tags/${{ github.ref_name }}"
+        env:
+          TAG: ${{ needs.verify.outputs.tag }}
+        run: |
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          scripts/make-source-archive.sh "refs/tags/$TAG"
       - uses: actions/upload-artifact@v4
         with:
           name: source
@@ -84,7 +115,9 @@ jobs:
     permissions:
       contents: write
     env:
+      TAG: ${{ needs.verify.outputs.tag }}
       VERSION: ${{ needs.verify.outputs.version }}
+      PRERELEASE: ${{ needs.verify.outputs.prerelease }}
       DEB: lucerna_${{ needs.verify.outputs.deb_version }}_amd64.deb
       RPM: lucerna-${{ needs.verify.outputs.rpm_version }}-${{ needs.verify.outputs.rpm_release }}.x86_64.rpm
       TARBALL: lucerna-${{ needs.verify.outputs.version }}.tar.gz
@@ -92,7 +125,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.ref }}
+          ref: refs/tags/${{ needs.verify.outputs.tag }}
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
@@ -101,14 +134,22 @@ jobs:
       - name: 10. Exactly the expected artifacts, then SHA-256 checksums
         run: |
           set -eu
-          cd artifacts
           expected="$(printf '%s\n' "$DEB" "$RPM" "$TARBALL" | sort)"
-          found="$(find . -maxdepth 1 -type f -printf '%f\n' | sort)"
+          found="$(cd artifacts && find . -maxdepth 1 -type f -printf '%f\n' | sort)"
           if [ "$found" != "$expected" ]; then
             echo "unexpected artifact set"; echo "expected:"; echo "$expected"; echo "found:"; echo "$found"
             exit 1
           fi
-          sha256sum "$DEB" "$RPM" "$TARBALL" > SHA256SUMS
+          # GitHub rewrites "~" to "." in asset names (lucerna_1.0.0~rc1_amd64.deb is stored as
+          # lucerna_1.0.0.rc1_amd64.deb). The files are named that way here so that SHA256SUMS
+          # matches what people download. The package inside is untouched: its version is still
+          # 1.0.0~rc1.
+          mkdir release
+          for name in "$DEB" "$RPM" "$TARBALL"; do
+            cp "artifacts/$name" "release/$(printf '%s' "$name" | tr '~' '.')"
+          done
+          cd release
+          sha256sum -- * > SHA256SUMS
           sha256sum -c SHA256SUMS
           cat SHA256SUMS
       - name: Release notes from CHANGELOG.md
@@ -120,34 +161,33 @@ jobs:
             echo "Desktop behaviour (wallpaper appearance, icon layering, stacking) has **not** been validated on a real"
             echo "desktop by the build pipeline; see docs/MANUAL-ACCEPTANCE.md."
             echo
-            echo "Verify downloads with: \`sha256sum -c SHA256SUMS\`"
+            echo "Verify downloads with: \`sha256sum -c SHA256SUMS\`. GitHub shows \`~\` in file names as \`.\`;"
+            echo "the Debian package version is still \`$(scripts/version.sh --deb)\`."
           } > notes.md
       - name: 11-12. Create or update the release and attach the artifacts
         run: |
           set -eu
-          tag="${{ github.ref_name }}"
-          pre="${{ needs.verify.outputs.prerelease }}"
           # The release stays a draft (invisible to users) until every asset is attached and
           # verified, so a failed upload can never leave a public, partial release.
-          if gh release view "$tag" >/dev/null 2>&1; then
+          if gh release view "$TAG" >/dev/null 2>&1; then
             # A re-run: keep the release, replace its notes and assets. The tag is never touched.
-            gh release edit "$tag" --notes-file notes.md --prerelease="$pre"
+            gh release edit "$TAG" --notes-file notes.md --prerelease="$PRERELEASE"
           else
-            gh release create "$tag" --draft --verify-tag --title "Lucerna $VERSION" \
-              --notes-file notes.md --prerelease="$pre"
+            gh release create "$TAG" --draft --verify-tag --title "Lucerna $VERSION" \
+              --notes-file notes.md --prerelease="$PRERELEASE"
           fi
-          for name in "$DEB" "$RPM" "$TARBALL" SHA256SUMS; do
+          for path in release/*; do
             attempt=1
-            until gh release upload "$tag" "artifacts/$name" --clobber; do
-              [ "$attempt" -lt 3 ] || { echo "could not upload $name"; exit 1; }
+            until gh release upload "$TAG" "$path" --clobber; do
+              [ "$attempt" -lt 3 ] || { echo "could not upload $path"; exit 1; }
               attempt=$((attempt + 1))
               sleep 5
             done
           done
-          uploaded="$(gh release view "$tag" --json assets -q '.assets[].name' | sort)"
-          expected="$(printf '%s\n' "$DEB" "$RPM" "$TARBALL" SHA256SUMS | sort)"
+          uploaded="$(gh release view "$TAG" --json assets -q '.assets[].name' | sort)"
+          expected="$(cd release && find . -maxdepth 1 -type f -printf '%f\n' | sort)"
           if [ "$uploaded" != "$expected" ]; then
             echo "release asset set is wrong"; echo "expected:"; echo "$expected"; echo "uploaded:"; echo "$uploaded"
             exit 1
           fi
-          gh release edit "$tag" --draft=false --prerelease="$pre"
+          gh release edit "$TAG" --draft=false --prerelease="$PRERELEASE"

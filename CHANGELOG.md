@@ -6,6 +6,17 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- The release workflow's publish step failed for `v1.0.0-rc.1` because GitHub stores `~` in asset
+  names as `.`, so `lucerna_1.0.0~rc1_amd64.deb` became `lucerna_1.0.0.rc1_amd64.deb` and the
+  asset check (correctly) refused to publish. Release assets and `SHA256SUMS` now use the names
+  GitHub serves, so `sha256sum -c` works on a download; the package's own version is unchanged.
+
+### Added
+- The release workflow can be started by hand from `main` for an existing tag, to finish a release
+  whose original run failed for a reason fixed on `main` afterwards. It still checks out and
+  builds the exact tag; tags are never moved.
+
 ## [1.0.0-rc.1] - 2026-09-30
 
 The desktop acceptance candidate. No feature changes since 0.9.0: this version exists so the

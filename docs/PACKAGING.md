@@ -109,3 +109,15 @@ a release with one package. Re-running attaches assets with `--clobber`; the tag
 
 To cut a release: update `CHANGELOG.md` (dated section), bump the workspace version, merge to
 `main`, then `git tag -a vX.Y.Z -m "Lucerna vX.Y.Z" && git push origin main vX.Y.Z`.
+
+**Asset names.** GitHub stores `~` in asset names as `.`, so a pre-release Debian package is
+attached as `lucerna_1.0.0.rc1_amd64.deb`. `SHA256SUMS` uses the names as served, so
+`sha256sum -c SHA256SUMS` works in the download directory. The package itself is unchanged: `dpkg-deb -I`
+still shows `Version: 1.0.0~rc1`, and the build artifact of the workflow keeps the tilde name.
+
+**Finishing a release by hand.** If the run for a tag fails for a reason that is fixed on `main`
+afterwards, start the `release` workflow manually from `main` with the existing tag's name
+(`gh workflow run release --ref main -f tag=vX.Y.Z`). It checks out, verifies and builds that exact
+tag (the reusable CI and packages workflows receive the tag as their `ref`), reuses the draft
+release if one exists, and publishes only when everything passed. A manual run from any other
+branch is refused. Tags are never moved or recreated.
