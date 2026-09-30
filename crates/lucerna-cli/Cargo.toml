@@ -16,6 +16,9 @@ lucerna-core.workspace = true
 lucerna-ipc.workspace = true
 lucerna-x11.workspace = true
 clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+zbus.workspace = true
 
 [[bin]]
 name = "lucernactl"
