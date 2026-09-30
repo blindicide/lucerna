@@ -965,10 +965,15 @@ name = "lucerna-ui"
 version = "0.3.0"
 dependencies = [
  "clap",
+ "futures-util",
  "gtk4",
  "lucerna-core",
+ "lucerna-daemon",
  "lucerna-ipc",
+ "lucerna-testkit",
+ "tokio",
  "tracing",
+ "zbus",
 ]
 
 [[package]]
