@@ -4,7 +4,7 @@ members = ["crates/*"]
 
 # The single canonical version source for every binary, package and document (directive §29).
 [workspace.package]
-version = "0.7.0"
+version = "0.8.0"
 edition = "2024"
 rust-version = "1.98"
 license = "MIT"
