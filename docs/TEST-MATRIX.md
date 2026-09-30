@@ -77,9 +77,24 @@ Test locations: unit tests live next to the code (`crates/*/src`); integration s
 | Requests during shutdown cannot hang it | `daemon_integration::calls_that_arrive_during_shutdown_…` |
 | Packages install, dependencies resolve, binaries/desktop file/icon exist, `--version`/`--help` headless, removal keeps config (§35) | `scripts/smoke-test-package.sh` in fresh `ubuntu:24.04` / `fedora:44` containers (`packages.yml`: `deb-smoke`, `rpm-smoke`) |
 | Package helper scripts | `tests/scripts/packaging_test.sh`, `tests/scripts/version_test.sh` |
+| `doctor` covers every item of the §21 list, including X server and RandR facts (§21) | `cli_e2e::doctor_with_a_daemon_includes_its_diagnostics` (field-by-field); `x11_protocol::nemo_simulation_detected` (connection, server, RandR, Nemo, stacking); `lucerna-cli doctor::tests` |
+| No shell invocation, no forbidden crates, no `tokio` in zbus (§5, §26, §48) | `architecture::{no_shell_invocation_in_production_sources, zbus_never_enables_tokio_feature, pure_code_names_no_gui_x11_dbus_or_async_runtime}`; `unsafe_code = "deny"` in `[workspace.lints]` |
+| Licences and advisories (§33) | `cargo-deny` job in `ci.yml` using `deny.toml` |
 | Release tag is annotated, equals the workspace version, has a changelog section (§40 steps 2-4) | `tests/scripts/release_test.sh` (pass, mismatch, lightweight, missing, empty-changelog cases in a throwaway repo); enforced by `release.yml` `verify` |
 | Release pipeline (§40): tag → CI suite → packages → source archive → SHA-256 → GitHub Release | `.github/workflows/release.yml`, linted with `actionlint`; **first real execution is the `v0.8.0` tag run** (result recorded in the release itself) |
 | Release never publishes a partial set | `release.yml`: `publish` needs `ci`, `packages`, `source`, and asserts the exact artifact list before `sha256sum -c` |
+
+## Not automated, and why
+
+| Behaviour | Why | Where it is recorded |
+| --- | --- | --- |
+| Anything about how the wallpaper, the GUI or the icons *look* or stack under Cinnamon/Muffin/Nemo | needs a real desktop | LUC-T01 to LUC-T20 (all `NOT RUN — REQUIRES REAL DESKTOP`) |
+| Behaviour of a real compositor or window manager (Muffin) | Xvfb has neither | LUC-T05 to LUC-T08 |
+| Real multi-monitor hardware, EDID from real panels, DPI scaling | Xvfb virtual monitors only | LUC-T12, LUC-T13 |
+| Real screen-locker signalling (`org.cinnamon.ScreenSaver`) | the tests use a stand-in that implements the same interface | LUC-T09 (fullscreen) and the lock note in `docs/X11-CINNAMON-NOTES.md` |
+| GPU decoding, CPU/GPU load, battery | no GPU or session on the server | LUC-T20 |
+| Package installation on a real Mint machine (menu entry, icon) | containers have no desktop | LUC-T01 |
+| Package signing | not part of v1 | `docs/PACKAGING.md` |
 
 ## Desktop-only (not automatable on the server)
 
