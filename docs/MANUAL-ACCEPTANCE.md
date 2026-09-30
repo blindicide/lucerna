@@ -1,5 +1,8 @@
 # Manual Desktop Acceptance Campaign
 
+**Frozen at v0.9.0.** Tests LUC-T01 to LUC-T20 are fixed for the release candidate; only a person
+recording results, or a defect found by running them, may change this file.
+
 > **Status: NOT RUN — REQUIRES REAL DESKTOP.**
 > This campaign was written by the development agent on a headless server. It has **not** been
 > executed by the agent and no result below has been filled in. Every result cell says
@@ -47,7 +50,7 @@ question, and it can only be answered on a real desktop. If a test in LUC-T04 to
 (wallpaper invisible, drawn above the icons, icons not clickable, wrong stacking), try the
 alternative and repeat the test:
 
-1. `lucernactl pause` is not needed. Edit `~/.config/lucerna/config.toml` and set:
+1. Edit `~/.config/lucerna/config.toml` and set:
 
    ```toml
    [x11]
