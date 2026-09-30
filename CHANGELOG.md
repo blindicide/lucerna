@@ -6,6 +6,29 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-30
+
+### Added
+- Native packages. A Debian package built and tested on Ubuntu 24.04 (Linux Mint 22's base) and
+  an RPM built and tested on Fedora 44, each compiled in its own distribution rather than
+  converted. Both install the same files: the three programs, their man pages, a desktop entry,
+  a scalable icon and AppStream metadata, plus the documentation and license.
+- Dependency metadata: `mpv` is required, the GTK 4 libraries are detected from the binaries (no
+  private GTK is bundled), and a D-Bus session bus is recommended on Debian.
+- Package builders (`scripts/build-deb.sh`, `scripts/build-rpm.sh`) and a source-archive script.
+  The Debian changelog, RPM changelog, AppStream release entry and man-page headers are generated
+  from the single workspace version and the dated CHANGELOG heading, so no second version exists.
+- An install/uninstall smoke test that runs in a fresh container without a display or session
+  bus: files installed, `--version` and `--help` of all three programs, a clear message from
+  `lucerna` without a display, `lucernactl doctor` seeing an mpv that accepts every option
+  Lucerna passes, and removal that leaves the user's configuration alone.
+- A `packages` GitHub Actions workflow that builds and smoke-tests both packages, and
+  `docs/PACKAGING.md`.
+- Manual pages for `lucerna`, `lucernad` and `lucernactl`.
+
+### Notes
+- The icon, desktop entry and menu presence have not been seen on a desktop (LUC-T01, LUC-T02).
+
 ## [0.6.0] - 2026-09-30
 
 ### Added

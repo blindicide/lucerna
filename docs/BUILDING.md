@@ -63,4 +63,4 @@ must be justified inside `deny.toml`.
 
 ## Package builds
 
-Added in the packaging milestone; see `docs/PACKAGING.md` once it exists.
+See [PACKAGING.md](PACKAGING.md).
