@@ -6,8 +6,9 @@
 #
 # --bindir defaults to $CARGO_TARGET_DIR/release, or target/release in the source tree.
 #
-# Installs: the three binaries, the desktop entry, the icon and the AppStream metainfo (with its
-# release entry generated from the workspace version - never a second hard-coded copy).
+# Installs: the three binaries, their man pages, the desktop entry, the icon and the AppStream
+# metainfo. The release entry and the man pages' version come from the workspace version, never from
+# a second hard-coded copy.
 # Documentation and the license are installed by the packaging tools (dh_installdocs, %doc).
 set -euo pipefail
 
@@ -40,10 +41,16 @@ install -Dm644 "$root/assets/desktop/org.lucerna.Lucerna.desktop" \
 install -Dm644 "$root/assets/icons/hicolor/scalable/apps/org.lucerna.Lucerna.svg" \
     "$destdir$prefix/share/icons/hicolor/scalable/apps/org.lucerna.Lucerna.svg"
 
+for page in lucerna lucernad lucernactl; do
+    man="$destdir$prefix/share/man/man1/$page.1"
+    install -Dm644 "$root/assets/man/$page.1" "$man"
+    sed -i -e "s/@VERSION@/$semver/" -e "s/@DATE@/$release_date/" "$man"
+done
+
 metainfo="$destdir$prefix/share/metainfo/org.lucerna.Lucerna.metainfo.xml"
 install -Dm644 "$root/assets/desktop/org.lucerna.Lucerna.metainfo.xml" "$metainfo"
 sed -i -e "s/@VERSION@/$semver/" -e "s/@DATE@/$release_date/" "$metainfo"
-if grep -q '@[A-Z]*@' "$metainfo"; then
+if grep -q '@[A-Z]*@' "$metainfo" "$destdir$prefix"/share/man/man1/*.1; then
     echo "install-files.sh: unresolved placeholder in $metainfo" >&2
     exit 1
 fi

@@ -37,6 +37,7 @@ mkdir -p "$tmp/bin"
 for b in lucerna lucernad lucernactl; do printf '#!/bin/sh\n' >"$tmp/bin/$b"; chmod +x "$tmp/bin/$b"; done
 "$scripts/install-files.sh" --destdir "$tmp/root" --prefix /usr --bindir "$tmp/bin" || failures=$((failures + 1))
 for f in usr/bin/lucerna usr/bin/lucernad usr/bin/lucernactl \
+    usr/share/man/man1/lucerna.1 usr/share/man/man1/lucernad.1 usr/share/man/man1/lucernactl.1 \
     usr/share/applications/org.lucerna.Lucerna.desktop \
     usr/share/icons/hicolor/scalable/apps/org.lucerna.Lucerna.svg \
     usr/share/metainfo/org.lucerna.Lucerna.metainfo.xml; do
@@ -45,7 +46,7 @@ done
 metainfo="$tmp/root/usr/share/metainfo/org.lucerna.Lucerna.metainfo.xml"
 version="$("$scripts/version.sh" --semver)"
 grep -q "release version=\"$version\"" "$metainfo" || { echo "FAIL: metainfo lacks the workspace version"; failures=$((failures + 1)); }
-grep -q '@' "$metainfo" && { echo "FAIL: placeholder left in metainfo"; failures=$((failures + 1)); }
+grep -q '@' "$metainfo" "$tmp"/root/usr/share/man/man1/*.1 && { echo "FAIL: placeholder left in metainfo"; failures=$((failures + 1)); }
 
 # --- a missing binary is an error, not a half-installed tree.
 rm "$tmp/bin/lucernad"
