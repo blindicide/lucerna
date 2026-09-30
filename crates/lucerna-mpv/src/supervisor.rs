@@ -46,6 +46,9 @@ pub struct SupervisorConfig {
     pub timings: Timings,
     /// Test builds only.
     pub vo_override: Option<String>,
+    /// Extra environment for mpv (tests only, for example `DISPLAY` of an Xvfb). Production
+    /// renderers inherit the daemon's environment unchanged.
+    pub extra_env: Vec<(String, String)>,
     pub registry: Arc<PidRegistry>,
 }
 
@@ -566,6 +569,9 @@ impl Actor {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(false);
+        for (key, value) in &self.cfg.extra_env {
+            command.env(key, value);
+        }
         die_with_parent(&mut command);
 
         let mut child = match command.spawn() {
