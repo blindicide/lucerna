@@ -302,6 +302,46 @@ uses zbus's own executor threads and talks to its tokio engine through channels.
 `lucernactl` is a blocking client: text or `--json` output, meaningful exit codes, `doctor` that
 works with or without a daemon and never modifies anything.
 
+## GTK control application (implemented in v0.4.0)
+
+`lucerna` is a *client*. It never owns a renderer or touches X11 windows; `lucerna-ui` can depend
+only on `lucerna-core` and `lucerna-ipc`, so it cannot link the backend or the mpv supervisor.
+Closing the window never stops the wallpaper - the daemon owns it.
+
+* **Start-up order** (§24, §34): parse arguments with clap, check that `DISPLAY` or
+  `WAYLAND_DISPLAY` is set, and only then initialise GTK. `--help` and `--version` therefore work
+  on a headless machine, and running `lucerna` without a display prints a message instead of a panic.
+* **Layers.** `DaemonLink` (async wrapper over the D-Bus proxy, runtime-agnostic) →
+  `Controller` (state, operations, signal following, all on the glib main context) →
+  pages (widgets only). Pages never see D-Bus; they call the controller and re-render when it
+  publishes new state.
+* **`presenter/`** turns D-Bus DTOs into plain view models (library rows, drop-down contents and
+  the index ↔ value mapping, the banner decision, the About text). It contains no GTK and is fully
+  unit-tested; the architecture test enforces that it names no GTK, X11, D-Bus or async type.
+* **`strings.rs`** holds every user-visible string.
+* **Daemon control.** If `org.lucerna.Lucerna1` has no owner the banner says so and offers *Start*;
+  the GUI also starts the service itself on launch (D3), from next to its own executable or `PATH`,
+  in its own process group so it outlives the GUI, and waits up to 5 s for the bus name. The header
+  menu has Pause, Resume, Reload and Quit service. A 2 s poll notices a daemon that appears or
+  disappears; signals (`StatusChanged`, `LibraryChanged`, ...) give immediate updates.
+* **Pages.** Wallpapers (library list, *Add…* with a file chooser filtered to videos and animated
+  images, *Remove from library* with a confirmation that the file is kept, *Set on all displays*,
+  *Stop wallpaper*, a "Missing" badge); Displays (the all-displays wallpaper and scaling, and the
+  detected displays with readable labels; per-display choice arrives in v0.5.0); Settings (autostart,
+  pause when fullscreen / locked, hardware decoding, FPS limit, audio behind a confirmation,
+  window stacking under *Advanced*); About (name, version from the workspace, description, license,
+  repository, runtime backend).
+* **Errors** appear in the banner with the daemon's own wording (what happened, why, what to do)
+  until dismissed; a failed renderer, a missing mpv, an unsupported session and configuration
+  problems each get their own message.
+
+**What is and is not tested.** `crates/lucerna-ui/tests/ui_structure.rs` builds the real window on
+an Xvfb display against a real daemon on a private bus and checks structure and wiring: the pages
+and controls exist, settings round-trip through the daemon, library operations reach the daemon
+and the page updates, errors reach the banner, and the GUI notices the daemon leaving. It does
+**not** and cannot say anything about layout, spacing, fonts, theming or how anything looks:
+**visual quality is NOT VALIDATED ON DEVELOPMENT SERVER** (LUC-T02 and LUC-T03 cover it manually).
+
 ## Status by area
 
 | Area | Status |
@@ -310,4 +350,5 @@ works with or without a daemon and never modifies anything.
 | Renderer core: argument builder, state machine, supervision, stale recovery | implemented (v0.1.0) |
 | X11 backend: RandR, surfaces, hints, click-through, restack, events, Cinnamon/Nemo probes | implemented (v0.2.0) - protocol-tested under Xvfb; **desktop appearance: MANUAL VALIDATION REQUIRED** |
 | Daemon, D-Bus API, CLI, configuration, state, diagnostics, single instance, clean shutdown | implemented (v0.3.0) |
-| GUI, per-display assignment and lock pause in the API, lifecycle polish, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |
+| GTK control application: pages, daemon control, error banner | implemented (v0.4.0) — structure tested under Xvfb; **visual quality NOT VALIDATED ON DEVELOPMENT SERVER** |
+| Per-display assignment and lock pause in the API, lifecycle polish, packaging | planned; see `docs/IMPLEMENTATION-PLAN.md` |

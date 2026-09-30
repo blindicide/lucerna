@@ -15,9 +15,21 @@ workspace = true
 lucerna-core.workspace = true
 lucerna-ipc.workspace = true
 clap.workspace = true
+futures-util.workspace = true
 gtk4.workspace = true
 tracing.workspace = true
+zbus.workspace = true
 
 [[bin]]
 name = "lucerna"
 path = "src/main.rs"
+
+[dev-dependencies]
+lucerna-core = { workspace = true, features = ["test-support"] }
+lucerna-daemon.workspace = true
+lucerna-testkit = { path = "../lucerna-testkit" }
+tokio.workspace = true
+
+[[test]]
+name = "ui_structure"
+harness = false
