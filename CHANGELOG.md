@@ -6,6 +6,61 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-30
+
+### Added
+- `lucernad`, the per-user service. One engine task owns configuration, the wallpaper library,
+  the display backend and the renderers, and makes every start/stop decision by comparing what
+  should run (configuration, connected displays, file availability, pause policy) with what
+  runs. Renderers get their surface only when they can really start: a missing mpv or a
+  missing file never leaves a black window over the normal desktop background.
+- Single-instance enforcement in two independent layers, a file lock in the runtime directory and
+  ownership of the session-bus name. A second `lucernad` prints who is running and exits with
+  status 0.
+- The `org.lucerna.Lucerna1` session D-Bus API: status, displays, assignments, wallpaper library
+  management, scaling, settings, pause/resume/stop/start/reload/quit, diagnostics, change
+  signals, and specific errors with actionable messages. Documented in `docs/IPC.md`.
+- `lucernactl`: `status`, `monitors`, `wallpapers`, `play`, `pause`, `resume`, `stop`
+  (`--daemon` to quit the service), `reload` and `doctor`, with `--json` output and meaningful
+  exit codes (3 when the daemon is not running, 4 for bad requests, 5 unsupported session, 6
+  configuration problems, 7 mpv missing).
+- Configuration schema version 1: lenient reading (unknown keys ignored and preserved together
+  with comments, unrecognised values fall back with a warning), atomic writes, a migration
+  framework with automatic backups, a corrupt file moved aside instead of overwritten, and a
+  file written by a newer Lucerna treated as read-only.
+- The wallpaper library: absolute canonical paths, idempotent adds, removal that never touches
+  the media, and availability tracking for files on drives that come and go.
+- The pure policy pieces used by the daemon: the pause policy, the reconciliation planner and
+  session classification with a clear message for Wayland sessions and for a missing display.
+- `lucernactl doctor`: environment (through an allow-list), mpv and option compatibility,
+  configuration and autostart state, the daemon's own diagnostics, and a read-only X11 probe when
+  the daemon cannot be asked. `--redact` hides the home directory, user name, host name, wallpaper
+  file names and monitor serial numbers.
+- Autostart as a single per-user XDG autostart entry, created on first run and switched from the
+  settings API. Disabling it removes the only startup mechanism.
+- Clean shutdown on SIGTERM, SIGINT, SIGHUP, `Quit` or loss of the display connection: renderers
+  are stopped, wallpaper windows removed, sockets and registry cleaned, the bus name and lock
+  released.
+- Documentation: the D-Bus API, the configuration reference, troubleshooting for the common
+  problems, and a test matrix tying each requirement to the tests that exercise it.
+- Integration test suites that run the whole daemon against a private D-Bus, a fake backend and a
+  fake mpv, run the real `lucernad` and `lucernactl` binaries (including against Xvfb), and cover
+  duplicate launch, signals, logout, unsupported sessions, corrupt configuration and missing
+  files.
+
+### Changed
+- Assigning a wallpaper to one specific display is not available yet through the API; assign to
+  all displays with `*`. Per-display assignment arrives with the multi-monitor release.
+
+### Fixed
+- The daemon must not take over the bus name from a running daemon (the D-Bus library replaces
+  the current owner by default); the name request is now non-replacing.
+
+### Notes
+- The GUI is still a stub, and nothing has been validated on a real desktop: wallpaper
+  appearance, icon layering, click-through, stacking and per-monitor fullscreen behaviour remain
+  IMPLEMENTED — MANUAL DESKTOP VALIDATION REQUIRED.
+
 ## [0.2.0] - 2026-09-30
 
 ### Added
