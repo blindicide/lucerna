@@ -86,6 +86,33 @@ impl Default for Setup {
     }
 }
 
+/// Options for an in-process daemon on a private bus with test-friendly timings.
+pub fn daemon_options(
+    paths: &Paths,
+    bus_address: &str,
+    backend: BackendChoice,
+    mpv_override: Option<OsString>,
+    session: SessionEnv,
+    recheck_interval: Duration,
+) -> DaemonOptions {
+    DaemonOptions {
+        paths: paths.clone(),
+        session,
+        bus: BusChoice::Address(bus_address.to_owned()),
+        backend,
+        mpv_override,
+        path_var: Some(OsString::from("/nonexistent-lucerna-test-path")),
+        daemon_exe: PathBuf::from("/usr/bin/lucernad"),
+        display_wait: Duration::from_millis(0),
+        renderer_timings: fast_timings(),
+        vo_override: None,
+        extra_env: Vec::new(),
+        recheck_interval,
+        handle_signals: false,
+        autostart_on_first_run: true,
+    }
+}
+
 pub struct Fixture {
     pub bus: TestBus,
     pub env: TestEnv,
@@ -140,23 +167,14 @@ impl Fixture {
         let backend = setup
             .backend
             .unwrap_or_else(|| BackendChoice::Injected(Box::new(fake.clone())));
-
-        let options = DaemonOptions {
-            paths: paths.clone(),
-            session: setup.session,
-            bus: BusChoice::Address(bus.address.clone()),
+        let options = daemon_options(
+            &paths,
+            &bus.address,
             backend,
-            mpv_override: setup.mpv_override,
-            path_var: Some(OsString::from("/nonexistent-lucerna-test-path")),
-            daemon_exe: PathBuf::from("/usr/bin/lucernad"),
-            display_wait: Duration::from_millis(0),
-            renderer_timings: fast_timings(),
-            vo_override: None,
-            extra_env: Vec::new(),
-            recheck_interval: setup.recheck_interval,
-            handle_signals: false,
-            autostart_on_first_run: true,
-        };
+            setup.mpv_override,
+            setup.session,
+            setup.recheck_interval,
+        );
         let task = tokio::spawn(run(options));
 
         let conn = zbus::connection::Builder::address(bus.address.as_str())

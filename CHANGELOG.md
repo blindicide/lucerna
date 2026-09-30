@@ -6,6 +6,42 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-30
+
+### Added
+- The `lucerna` GTK 4 control application: a sidebar with the Wallpapers, Displays, Settings and
+  About pages, a header menu (Pause, Resume, Reload, Quit service) and a banner for problems.
+- Wallpapers page: the library with a "Missing" badge for files that cannot be found, *Add…*
+  through a file chooser filtered to videos and animated images (with an "All files" choice),
+  *Remove from library* behind a confirmation that says the file will not be deleted, *Set on all
+  displays* and *Stop wallpaper*.
+- Displays page: the wallpaper and scaling (fill, fit, stretch, center) for all displays, and the
+  detected displays with readable names such as "eDP-1 — 1920×1080 — Primary", including
+  displays that are currently unplugged.
+- Settings page: start automatically, pause when fullscreen, pause when the screen is locked,
+  hardware decoding, FPS limit, audio (behind an explicit confirmation, so it is never turned on
+  silently) and, under Advanced, window stacking.
+- About page: version (from the workspace), description, license, repository and the runtime
+  backend reported by the daemon.
+- Daemon control from the GUI: it starts the service itself when it is not running (in its own
+  process group so the wallpaper survives closing the window), notices when the service appears or
+  disappears, and follows the daemon's change signals for immediate updates.
+- Error handling: the daemon's own messages (what happened, why, what to do) appear in a banner;
+  a missing mpv, an unsupported session, configuration problems and failed renderers each have
+  their own text and a matching action.
+- A structural test that builds the real window on an Xvfb display against a real daemon and
+  checks the pages, the controls and their wiring. It does not, and cannot, check appearance.
+
+### Fixed
+- A client that kept calling the daemon while it was shutting down could stop the daemon from
+  ever finishing its shutdown. Requests that arrive during shutdown are now answered with an
+  error immediately.
+
+### Notes
+- Visual quality of the GUI is NOT VALIDATED ON DEVELOPMENT SERVER: layout, spacing, fonts,
+  theming and the banner colours have not been seen on a desktop (LUC-T02, LUC-T03).
+- Choosing a different wallpaper for each display arrives with the multi-monitor release.
+
 ## [0.3.0] - 2026-09-30
 
 ### Added

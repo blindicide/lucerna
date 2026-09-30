@@ -4,8 +4,17 @@
 //! initialised, so `--help` and `--version` work on a headless machine
 //! (directive §24, §34).
 
+mod controller;
 mod display;
+mod link;
+mod pages;
+pub mod presenter;
 mod strings;
+mod window;
+
+pub use controller::{AppState, Controller};
+pub use link::{DaemonLink, Event, LinkError};
+pub use window::{MainWindow, PAGE_NAMES};
 
 use std::process::ExitCode;
 
@@ -38,13 +47,11 @@ pub fn cli_main() -> ExitCode {
 
     let app = gtk4::Application::builder().application_id(APP_ID).build();
     app.connect_activate(|app| {
-        let window = gtk4::ApplicationWindow::builder()
-            .application(app)
-            .title(strings::WINDOW_TITLE)
-            .default_width(900)
-            .default_height(600)
-            .build();
-        window.present();
+        // Closing the window never stops the wallpaper: the daemon owns the renderers (§5).
+        let controller = Controller::new(None, true);
+        let main = MainWindow::new(app, &controller);
+        controller.start();
+        main.window.present();
     });
     // GTK must not re-parse our command line.
     app.run_with_args::<&str>(&[]).into()
