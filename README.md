@@ -42,7 +42,9 @@ yet: the GUI's look and the wallpaper's behaviour under Cinnamon are unverified.
 
 ## Installation
 
-Native `.deb` (Debian, Ubuntu, Linux Mint 22+) and `.rpm` (Fedora) packages are built by CI; see
+Native `.deb` (Debian, Ubuntu, Linux Mint 22+) and `.rpm` (Fedora) packages, a source archive and
+`SHA256SUMS` are attached to each GitHub Release by the release pipeline (verify with
+`sha256sum -c SHA256SUMS`); see
 [docs/PACKAGING.md](docs/PACKAGING.md). Install with `sudo apt install ./lucerna_*.deb` or
 `sudo dnf install ./lucerna-*.rpm`; `mpv` and the GTK 4 libraries are pulled in automatically.
 To build from source, see [docs/BUILDING.md](docs/BUILDING.md).
