@@ -1,5 +1,14 @@
 # Troubleshooting
 
+Logs: the daemon writes `~/.local/state/lucerna/logs/lucernad.log` (bounded) as well as the journal
+(`journalctl --user -t lucernad` when started by the session); mpv's own output is in
+`renderer-*.log` beside it.
+
+**Slow to start at login?** At login `lucernad` waits up to 10 s for the X server and the window
+manager before showing the wallpaper, and requests wait until then. If your session starts them
+much later, raise the wait with `LUCERNA_DISPLAY_WAIT_MS` in the autostart entry, or add a delay in
+Startup Applications.
+
 Start with:
 
 ```sh

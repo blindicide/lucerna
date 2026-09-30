@@ -51,6 +51,14 @@ Test locations: unit tests live next to the code (`crates/*/src`); integration s
 | Resize on geometry change | `multi_monitor::a_geometry_change_resizes_the_surface_without_restarting` |
 | Fullscreen pauses only the covered monitor (§15) | `multi_monitor::{fullscreen_pauses_only_the_occluded_monitor, the_fullscreen_setting_can_be_turned_off_…}`; `geometry::tests` |
 | Lock pause via three sources (§15) | `multi_monitor::{the_cinnamon_screensaver_…, the_freedesktop_screensaver_…, logind_locked_hint_…, without_any_lock_service_…, a_session_that_starts_locked_…, pause_reasons_combine_…}` |
+| Renderer crash recovery, bounded restarts, user-visible failure (§51) | `lifecycle::{a_renderer_that_crashes_twice_…, a_crash_storm_stops_at_the_limit_…, an_unplayable_file_fails_once_…}`; `renderer_supervision::restart_storm_is_bounded` |
+| Missing media resumes by itself; entry kept (§11) | `lifecycle::{a_missing_wallpaper_comes_back_by_itself_…, a_file_that_vanishes_is_noticed_…}` |
+| mpv missing then installed (§49) | `lifecycle::mpv_installed_after_the_daemon_started_is_picked_up_by_reload`; `cli_e2e::a_missing_mpv_is_explained_by_status` |
+| Corrupt configuration surfaced in CLI/doctor (§30 v0.6.0) | `cli_e2e::a_corrupt_configuration_is_explained_by_status_and_doctor` |
+| Autostart not re-created when disabled (§22) | `lifecycle::{autostart_is_created_on_first_run_only_…, an_autostart_entry_disabled_from_the_desktop_settings_…}` |
+| Login race: wait for the window manager (§22) | `process_lifecycle::{the_daemon_waits_for_the_window_manager_…, without_a_window_manager_the_wait_is_bounded}` |
+| Logout (SIGHUP), kill -9, orphan recovery (§52) | `process_lifecycle::{sighup_ends_the_session_cleanly, when_the_daemon_is_killed_…, a_renderer_that_survives_a_killed_daemon_…, an_unrelated_mpv_is_never_touched_…}` |
+| Bounded, concise daemon log (§25) | `process_lifecycle::the_daemon_keeps_a_concise_bounded_log_…`; `bounded_log::tests` |
 | No restack fight (§14) | `multi_monitor::a_restack_fight_with_the_window_manager_is_rate_limited` |
 | Reconciliation (hotplug, reassignment, missing file) | `plan::tests` |
 | Session classification, Wayland detection (§50) | `session::tests`; `daemon_integration::a_wayland_session_is_reported_clearly_and_starts_nothing`; `process_lifecycle::a_wayland_session_is_explained_not_crashed_on` |
