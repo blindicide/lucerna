@@ -49,13 +49,19 @@ harness. The only valid status for desktop-appearance behaviour is
 - **WORKING** — a spinner line such as
   `✻ Fermenting… (12s · ↓ 3.2k tokens · thinking with high effort)` plus
   `esc to interrupt` in the status bar.
-- **The status bar alone is NOT reliable.** The dependable discriminator is the
-  hint line above the composer: when **idle** it reads `❯ Try "<rotating example>"`
-  (the example text varies — `grep -q 'Try "how'` is WRONG and returns nothing even
-  when idle, verified 2026-09-30); while **working** that line is replaced by a
-  rotating `Tip: …` line.
-  Test: `tmux capture-pane -t lucerna:harness -p -S -14 | grep -q '❯ Try "'`
-  → present means IDLE, absent means WORKING.
+- **Use the STATUS BAR — verified 2026-09-30.** The composer hint line is a ROTATING
+  suggestion and is NOT a reliable discriminator. Observed values include
+  `Try "write a test for <filepath>"`, `Try "how does <filepath> work?"`,
+  `Research this topic and write me a brief`, and `Save the session notes to memory`.
+  A test for `Try "` therefore reports a COMPLETED, parked harness as still working —
+  this exact error caused a real supervision failure (a finished campaign went
+  unreported for 1.5 h).
+  The dependable test is the status bar:
+  `tmux capture-pane -t lucerna:harness -p -S -3 | grep -q 'esc to interrupt'`
+  → **present means WORKING; absent means IDLE/parked** (idle shows
+  `⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents`).
+  Corroborate with the completion line `✻ Baked for <duration> · done <time>`, which
+  marks a finished turn.
 - **COMPLETION / park** — `✻ Brewed for <duration> · done <time>`, the status bar
   drops `esc to interrupt`, and the input prompt is a bare `❯`.
 - **Nudge mechanics** — first `C-u` (clear stray text), then the text and `Enter`
