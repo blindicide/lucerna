@@ -204,6 +204,12 @@ impl Engine {
             }
             Ok(())
         })?;
+        let target_name = if display.is_empty() {
+            ALL_DISPLAYS
+        } else {
+            display
+        };
+        tracing::info!(wallpaper = %id, target = target_name, "wallpaper assigned");
         // Choosing a wallpaper is an explicit "play this".
         self.user_stopped = false;
         self.clear_failed_slots().await;

@@ -74,6 +74,51 @@ impl BoundedLog {
     }
 }
 
+/// A [`Write`] adapter over a [`BoundedLog`] that forwards complete lines, so it can back a
+/// `tracing` subscriber. Bytes are buffered until a newline; an over-long unterminated line is cut.
+pub struct BoundedLogWriter {
+    log: BoundedLog,
+    pending: Vec<u8>,
+}
+
+/// Longest line the writer will assemble before forwarding it anyway.
+const MAX_PENDING: usize = 16 * 1024;
+
+impl BoundedLogWriter {
+    pub fn new(log: BoundedLog) -> Self {
+        Self {
+            log,
+            pending: Vec::new(),
+        }
+    }
+
+    fn drain_lines(&mut self) -> io::Result<()> {
+        while let Some(end) = self.pending.iter().position(|b| *b == b'\n') {
+            let line: Vec<u8> = self.pending.drain(..=end).collect();
+            let text = String::from_utf8_lossy(&line[..line.len() - 1]).into_owned();
+            self.log.write_line(&text)?;
+        }
+        if self.pending.len() > MAX_PENDING {
+            let text = String::from_utf8_lossy(&self.pending).into_owned();
+            self.pending.clear();
+            self.log.write_line(&text)?;
+        }
+        Ok(())
+    }
+}
+
+impl Write for BoundedLogWriter {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.pending.extend_from_slice(buf);
+        self.drain_lines()?;
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 fn rotated(path: &Path) -> PathBuf {
     let mut name = path.as_os_str().to_owned();
     name.push(".1");
@@ -130,6 +175,34 @@ mod tests {
             fs::read_to_string(&path).unwrap(),
             format!("{}\n", "b".repeat(40))
         );
+    }
+
+    #[test]
+    fn the_writer_forwards_whole_lines_even_when_written_in_pieces() {
+        let dir = tempdir("writer");
+        let path = dir.join("d.log");
+        let mut writer = BoundedLogWriter::new(BoundedLog::open(&path, 1024).unwrap());
+        writer.write_all(b"first ").unwrap();
+        writer.write_all(b"line\nsecond line\nthi").unwrap();
+        writer.write_all(b"rd\n").unwrap();
+        writer.flush().unwrap();
+        assert_eq!(
+            fs::read_to_string(&path).unwrap(),
+            "first line\nsecond line\nthird\n"
+        );
+    }
+
+    #[test]
+    fn the_writer_stays_within_the_bound_under_a_flood() {
+        let dir = tempdir("writer-flood");
+        let path = dir.join("d.log");
+        let mut writer = BoundedLogWriter::new(BoundedLog::open(&path, 4096).unwrap());
+        for i in 0..5000 {
+            writeln!(writer, "event number {i} with some payload text").unwrap();
+        }
+        let main = fs::metadata(&path).unwrap().len();
+        let old = fs::metadata(dir.join("d.log.1")).unwrap().len();
+        assert!(main <= 4096 && old <= 4096);
     }
 
     #[test]
