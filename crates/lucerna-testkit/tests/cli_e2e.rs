@@ -186,15 +186,25 @@ async fn bad_requests_and_unsupported_operations_have_their_exit_codes() {
         bad.stderr
     );
 
-    // Per-display assignment arrives in v0.5.0; until then the daemon says so (exit 4).
+    // A connector name resolves to a display and the assignment is per display.
     let per_display = ctl(
         &bus,
         &root,
         &["play", media.to_str().unwrap(), "--monitor", "HDMI-1"],
     )
     .await;
-    assert_eq!(per_display.code, 4, "{}", per_display.stderr);
-    assert!(per_display.stderr.contains("not available in this version"));
+    assert_eq!(per_display.code, 0, "{}", per_display.stderr);
+    assert!(
+        per_display.stdout.contains("on HDMI-1"),
+        "{}",
+        per_display.stdout
+    );
+    let assignments = f.proxy.get_assignments().await.unwrap();
+    assert!(
+        assignments
+            .iter()
+            .any(|a| { lucerna_ipc::dto::AssignmentDto::from_dict(a).display_id == "conn:HDMI-1" })
+    );
 
     // Usage errors are clap's exit code 2.
     assert_eq!(ctl(&bus, &root, &["frobnicate"]).await.code, 2);

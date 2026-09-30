@@ -138,6 +138,7 @@ async fn a_second_daemon_on_the_same_bus_exits_cleanly() {
         paths,
         session: SessionEnv::default(),
         bus: BusChoice::Address(first.bus.address.clone()),
+        system_bus: lucerna_daemon::SystemBusChoice::Disabled,
         backend: BackendChoice::Injected(Box::new(lucerna_core::testing::FakeBackend::new())),
         mpv_override: None,
         path_var: None,
@@ -171,6 +172,7 @@ async fn a_second_daemon_with_the_same_runtime_directory_is_stopped_by_the_lock(
         paths: first.paths.clone(), // same runtime directory
         session: SessionEnv::default(),
         bus: BusChoice::Address(second_bus.address.clone()),
+        system_bus: lucerna_daemon::SystemBusChoice::Disabled,
         backend: BackendChoice::Injected(Box::new(lucerna_core::testing::FakeBackend::new())),
         mpv_override: None,
         path_var: None,
