@@ -218,6 +218,30 @@ pub fn render_text(value: &Value) -> String {
         {
             out.push_str(&format!("!   {}\n", reason.replace('\n', "\n    ")));
         }
+        let connection = ["daemon", "diagnostics", "backend_diagnostics", "connection"];
+        if get(&connection).is_some_and(|v| v.is_object()) {
+            let at = |rest: &[&str]| match get(&[connection.as_slice(), rest].concat()) {
+                Some(Value::String(s)) => s.clone(),
+                Some(Value::Number(n)) => n.to_string(),
+                _ => "(unknown)".to_owned(),
+            };
+            out.push_str(&format!(
+                "✓ X11: {} ({} {}), RandR {}, window manager {}\n",
+                at(&["display"]),
+                at(&["server", "vendor"]),
+                at(&["server", "release"]),
+                at(&["randr", "version"]),
+                at(&["window_manager", "name"]),
+            ));
+        }
+        let failures = get(&["daemon", "diagnostics", "recent_failures"])
+            .and_then(Value::as_array)
+            .map_or(0, Vec::len);
+        if failures > 0 {
+            out.push_str(&format!(
+                "! {failures} recent renderer failure(s); see `lucernactl doctor --json` (recent_failures)\n"
+            ));
+        }
     } else {
         out.push_str(&format!(
             "! Daemon: not reachable\n    {}\n",
@@ -292,6 +316,31 @@ mod tests {
         assert!(text.contains("✓ X11: connected (read-only probe)"));
         assert!(text.contains("!   w"));
         assert!(text.contains("--redact"));
+    }
+
+    #[test]
+    fn a_running_daemon_contributes_the_x11_and_failure_lines() {
+        let mut v = report_json();
+        v["daemon"] = json!({"reachable": true, "diagnostics": {
+            "daemon_version": "0.9.0",
+            "backend": {"kind": "cinnamon-x11"},
+            "status": {"playback": "playing"},
+            "backend_diagnostics": {"connection": {
+                "display": ":0",
+                "server": {"vendor": "The X.Org Foundation", "release": 12101008},
+                "randr": {"version": "1.6"},
+                "window_manager": {"name": "Muffin"},
+            }},
+            "recent_failures": [{"display": "a"}, {"display": "b"}],
+        }});
+        let text = render_text(&v);
+        assert!(
+            text.contains(
+                "✓ X11: :0 (The X.Org Foundation 12101008), RandR 1.6, window manager Muffin"
+            ),
+            "{text}"
+        );
+        assert!(text.contains("! 2 recent renderer failure(s)"), "{text}");
     }
 
     #[test]
