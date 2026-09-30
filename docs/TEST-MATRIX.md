@@ -75,7 +75,9 @@ Test locations: unit tests live next to the code (`crates/*/src`); integration s
 | GUI view models and strings (§23, §48) | `lucerna-ui presenter::{wallpapers,displays,settings,banner,about}::tests` |
 | GUI never owns renderers or X11 windows (§5, §48) | `architecture::dependency_edges_follow_the_allow_table` (ui may not depend on mpv/x11) |
 | Requests during shutdown cannot hang it | `daemon_integration::calls_that_arrive_during_shutdown_…` |
-| Packaging (§35, §36) | added in v0.7.0 / v0.8.0 |
+| Packages install, dependencies resolve, binaries/desktop file/icon exist, `--version`/`--help` headless, removal keeps config (§35) | `scripts/smoke-test-package.sh` in fresh `ubuntu:24.04` / `fedora:44` containers (`packages.yml`: `deb-smoke`, `rpm-smoke`) |
+| Package helper scripts | `tests/scripts/packaging_test.sh`, `tests/scripts/version_test.sh` |
+| Release pipeline (§40) | added in v0.8.0 |
 
 ## Desktop-only (not automatable on the server)
 

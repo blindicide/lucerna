@@ -1,0 +1,75 @@
+.TH LUCERNACTL 1 "@DATE@" "Lucerna @VERSION@" "Lucerna"
+.SH NAME
+lucernactl \- control the Lucerna wallpaper service from the command line
+.SH SYNOPSIS
+.B lucernactl
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B lucernactl
+talks to the running
+.BR lucernad (1)
+over the session D-Bus. It works without a graphical session and never plays wallpapers itself.
+.SH COMMANDS
+.TP
+.B status \fR[\fB\-\-json\fR]
+Show what the service is doing.
+.TP
+.B monitors \fR[\fB\-\-json\fR]
+List the detected monitors and their stable ids (alias:
+.BR displays ).
+.TP
+.B wallpapers \fR[\fB\-\-json\fR]
+List the wallpaper library.
+.TP
+.B play \fIpath\fR [\fB\-\-monitor \fIid\fR]
+Add a video or animated image to the library and play it, on all monitors or on one (a monitor id
+or a connector name such as HDMI-1).
+.TP
+.B pause
+Pause all wallpapers.
+.TP
+.B resume
+Resume after
+.BR pause .
+.TP
+.B stop \fR[\fB\-\-daemon\fR]
+Stop all wallpapers; with
+.B \-\-daemon
+ask the service itself to quit.
+.TP
+.B reload
+Re-read the configuration and start over.
+.TP
+.B doctor \fR[\fB\-\-json\fR] [\fB\-\-redact\fR]
+Gather everything needed to debug desktop integration. Works even if the service is not running.
+.B \-\-redact
+hides the home directory, user name, host name, wallpaper file names and monitor serial numbers.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Unexpected error.
+.TP
+.B 2
+Command-line usage error.
+.TP
+.B 3
+The service is not running.
+.TP
+.B 4
+Bad request (unknown wallpaper or display, bad path).
+.TP
+.B 5
+Unsupported session (for example Wayland).
+.TP
+.B 6
+Configuration problem.
+.TP
+.B 7
+mpv is missing.
+.SH SEE ALSO
+.BR lucerna (1),
+.BR lucernad (1)

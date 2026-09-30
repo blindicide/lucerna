@@ -1,0 +1,24 @@
+Source: lucerna
+Section: graphics
+Priority: optional
+Maintainer: The Lucerna authors <lucerna-maintainers@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13), pkgconf, libgtk-4-dev (>= 4.10)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+Homepage: https://github.com/blindicide/lucerna
+Vcs-Git: https://github.com/blindicide/lucerna.git
+
+Package: lucerna
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, mpv
+Recommends: default-dbus-session-bus | dbus-session-bus
+Description: animated wallpapers for Linux
+ Lucerna plays video and animated-image wallpapers as the desktop background,
+ using mpv. A small per-user background service keeps the wallpapers running
+ after the control window is closed, restores them at login, and pauses them
+ while they are covered by a fullscreen window or the screen is locked.
+ .
+ The package contains the GTK 4 control application (lucerna), the background
+ service (lucernad) and a command-line controller with diagnostics
+ (lucernactl). It supports X11 sessions, with Linux Mint Cinnamon as the
+ target desktop; Wayland sessions are detected and reported but not supported.

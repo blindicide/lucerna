@@ -1,0 +1,152 @@
+# Native package builds (directive §36): the .deb is compiled inside an Ubuntu container and the
+# .rpm inside a Fedora container. Nothing is repackaged across formats.
+#
+# Also exposed through workflow_call so release.yml builds and tests exactly the same packages.
+name: packages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "packaging/**"
+      - "assets/**"
+      - "scripts/**"
+      - "Cargo.*"
+      - "crates/**"
+      - ".github/workflows/packages.yml"
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      expected_version:
+        description: "If set, fail unless the workspace version equals this"
+        type: string
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: never
+
+jobs:
+  deb:
+    name: build .deb (Ubuntu 24.04)
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    outputs:
+      semver: ${{ steps.version.outputs.semver }}
+    steps:
+      - name: Install build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential debhelper devscripts fakeroot dpkg-dev pkgconf libgtk-4-dev \
+            jq git curl ca-certificates lintian desktop-file-utils appstream python3
+      - uses: actions/checkout@v4
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install the Rust toolchain (pinned by rust-toolchain.toml)
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Read and check the version
+        id: version
+        run: |
+          semver="$(scripts/version.sh --semver)"
+          echo "semver=$semver" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ inputs.expected_version }}" ] && [ "$semver" != "${{ inputs.expected_version }}" ]; then
+            echo "workspace version $semver does not match expected ${{ inputs.expected_version }}"
+            exit 1
+          fi
+      - name: Build
+        run: scripts/build-deb.sh
+      - name: Inspect
+        run: |
+          set -eu
+          dpkg-deb -I dist/lucerna_*.deb
+          dpkg-deb -c dist/lucerna_*.deb
+          lintian --fail-on error dist/lucerna_*.deb
+          dpkg-deb -x dist/lucerna_*.deb /tmp/pkg
+          appstreamcli validate --no-net /tmp/pkg/usr/share/metainfo/org.lucerna.Lucerna.metainfo.xml
+          desktop-file-validate /tmp/pkg/usr/share/applications/org.lucerna.Lucerna.desktop
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  deb-smoke:
+    name: install and smoke-test .deb (fresh Ubuntu 24.04)
+    needs: deb
+    runs-on: ubuntu-24.04
+    container: ubuntu:24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: deb
+          path: dist
+      - name: Install the package (dependencies resolve from the archive)
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ./dist/lucerna_*.deb python3 desktop-file-utils
+      - name: Smoke test
+        run: scripts/smoke-test-package.sh deb --expect-version "${{ needs.deb.outputs.semver }}"
+
+  rpm:
+    name: build .rpm (Fedora 44)
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    outputs:
+      semver: ${{ steps.version.outputs.semver }}
+    steps:
+      - name: Install build tools
+        run: |
+          dnf install -y rpm-build gcc pkgconf-pkg-config gtk4-devel desktop-file-utils \
+            libappstream-glib jq git curl rpmlint python3 tar gzip which
+      - uses: actions/checkout@v4
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - name: Install the Rust toolchain (pinned by rust-toolchain.toml)
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Read and check the version
+        id: version
+        run: |
+          semver="$(scripts/version.sh --semver)"
+          echo "semver=$semver" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ inputs.expected_version }}" ] && [ "$semver" != "${{ inputs.expected_version }}" ]; then
+            echo "workspace version $semver does not match expected ${{ inputs.expected_version }}"
+            exit 1
+          fi
+      - name: Build
+        run: scripts/build-rpm.sh
+      - name: Inspect
+        run: |
+          rpm -qpi dist/lucerna-*.rpm
+          rpm -qpl dist/lucerna-*.rpm
+          rpmlint dist/lucerna-*.rpm || echo "rpmlint findings are informational"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  rpm-smoke:
+    name: install and smoke-test .rpm (fresh Fedora 44)
+    needs: rpm
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rpm
+          path: dist
+      - name: Install the package (dependencies resolve from the repositories)
+        run: dnf install -y ./dist/lucerna-*.rpm python3 desktop-file-utils
+      - name: Smoke test
+        run: scripts/smoke-test-package.sh rpm --expect-version "${{ needs.rpm.outputs.semver }}"

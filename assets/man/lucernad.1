@@ -1,0 +1,65 @@
+.TH LUCERNAD 1 "@DATE@" "Lucerna @VERSION@" "Lucerna"
+.SH NAME
+lucernad \- Lucerna background service
+.SH SYNOPSIS
+.B lucernad
+.RB [ \-v | \-\-verbose ]
+.br
+.B lucernad
+.RB ( \-\-help | \-\-version )
+.SH DESCRIPTION
+.B lucernad
+is the per-user service that owns the wallpaper renderers. It reads the configuration, discovers
+the displays, starts and supervises one
+.BR mpv (1)
+process per display, restarts crashed renderers a bounded number of times, and pauses them when a
+fullscreen window covers their display or the screen is locked. It is controlled over the session
+D-Bus (name
+.BR org.lucerna.Lucerna1 )
+by
+.BR lucerna (1)
+and
+.BR lucernactl (1).
+.PP
+Only one instance runs per user session; starting another prints the PID of the first and exits
+with status 0. The service is normally started at login by an XDG autostart entry, which the
+graphical application can switch on and off. It needs no privileges.
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-verbose
+Log at debug level.
+.TP
+.BR \-h ", " \-\-help
+Print usage and exit.
+.TP
+.BR \-V ", " \-\-version
+Print the version and exit.
+.SH SIGNALS
+.B SIGTERM, SIGINT
+and
+.B SIGHUP
+stop the renderers, remove the wallpaper windows and exit cleanly.
+.SH ENVIRONMENT
+.TP
+.B LUCERNA_LOG, RUST_LOG
+Log filter (default
+.BR lucerna=info ).
+.TP
+.B LUCERNA_MPV
+Absolute path of the mpv executable to use.
+.TP
+.B LUCERNA_DISPLAY_WAIT_MS
+How long to wait at login for DISPLAY, the X server and the window manager (default 10000).
+.SH FILES
+.TP
+.I ~/.config/lucerna/config.toml
+Configuration.
+.TP
+.I ~/.local/state/lucerna/logs/
+Bounded logs of the service and of each renderer.
+.TP
+.I $XDG_RUNTIME_DIR/lucerna/
+Lock file, renderer registry and private mpv control sockets.
+.SH SEE ALSO
+.BR lucerna (1),
+.BR lucernactl (1)

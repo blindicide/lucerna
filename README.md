@@ -42,9 +42,10 @@ yet: the GUI's look and the wallpaper's behaviour under Cinnamon are unverified.
 
 ## Installation
 
-Packages are produced by the release pipeline (`.deb`, `.rpm`, source archive, `SHA256SUMS`)
-once the packaging milestone lands. Until then, build from source; see
-[docs/BUILDING.md](docs/BUILDING.md).
+Native `.deb` (Debian, Ubuntu, Linux Mint 22+) and `.rpm` (Fedora) packages are built by CI; see
+[docs/PACKAGING.md](docs/PACKAGING.md). Install with `sudo apt install ./lucerna_*.deb` or
+`sudo dnf install ./lucerna-*.rpm`; `mpv` and the GTK 4 libraries are pulled in automatically.
+To build from source, see [docs/BUILDING.md](docs/BUILDING.md).
 
 ## Quick start (from a source build)
 
@@ -66,6 +67,7 @@ target/release/lucernactl doctor    # everything needed to debug desktop integra
 - [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - common problems
 - [docs/MANUAL-ACCEPTANCE.md](docs/MANUAL-ACCEPTANCE.md) - the desktop test campaign (not yet run)
 - [docs/X11-CINNAMON-NOTES.md](docs/X11-CINNAMON-NOTES.md) - what the X11 backend assumes about Cinnamon
+- [docs/PACKAGING.md](docs/PACKAGING.md) - package layout, versions and builds
 - [docs/TEST-MATRIX.md](docs/TEST-MATRIX.md) - which test covers which requirement
 - [docs/IMPLEMENTATION-PLAN.md](docs/IMPLEMENTATION-PLAN.md) - the v1 plan
 
