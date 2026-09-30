@@ -89,3 +89,23 @@ AppStream and desktop-file validation), `deb-smoke` (fresh `ubuntu:24.04`), `rpm
 * Only x86_64/amd64 is built and tested; nothing else is architecture-specific
   (`scripts/version.sh --deb-arch/--rpm-arch` map `uname -m`).
 * The Rust crates are linked statically; their licenses are checked by `cargo deny` in CI.
+
+## Releases
+
+Pushing a tag `v*` runs `.github/workflows/release.yml`, which performs the twelve steps of the
+directive in order:
+
+1. check out the exact tag; 2. verify it is **annotated**; 3. read the version; 4. verify tag ==
+Cargo workspace version (`scripts/check-tag.sh`; a mismatch such as `v0.8.0` on a `0.7.0` tree
+fails - package metadata is never rewritten to hide it) and that the version has a CHANGELOG
+section; 5-6. the full test suite and release build (the CI workflow); 7-8. build and smoke-test the
+`.deb` and `.rpm` (the packages workflow, with the expected version); 9. the source archive;
+10. SHA-256 checksums over exactly the three expected files; 11-12. create or update the GitHub
+Release (a pre-release for `-rc` versions) with notes taken from `CHANGELOG.md`, and attach
+everything.
+
+The `publish` job needs every other job, so **a failed package build means no release at all**, never
+a release with one package. Re-running attaches assets with `--clobber`; the tag is never touched.
+
+To cut a release: update `CHANGELOG.md` (dated section), bump the workspace version, merge to
+`main`, then `git tag -a vX.Y.Z -m "Lucerna vX.Y.Z" && git push origin main vX.Y.Z`.
