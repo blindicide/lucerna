@@ -38,28 +38,43 @@ Notes:
 | Item | Value |
 | --- | --- |
 | Session start | 2026-09-30 01:09 CEST |
-| Resume handle(s) | (in progress) |
-| Final commit / tag | (pending) |
-| Tokens (in / cache_read / cache_create / out) | (pending) |
-| `/usage` session % | 15% baseline at start of Phase B |
-| `/usage` weekly % | 2% baseline at start of Phase B |
-| Cost | (pending) |
+| Session end | 2026-09-30 07:02 CEST (turn completed; parked idle) |
+| Resume handle(s) | `claude --resume 0a6c5736-183f-496a-838a-f3ea63e272af` |
+| Final commit / tag | `eea6446` / `v1.0.0-rc.1` (workflow fix merged at `3acface`) |
+| Tokens (in / cache_read / cache_create / out) | 688 / 166,176,060 / 1,968,252 / 764,943 (total 168,909,943 unique) |
+| `/usage` session % | 21% used (resets 10:29am Europe/Amsterdam) |
+| `/usage` weekly % | 17% used (resets Oct 4, 8:59pm Europe/Amsterdam) |
+| Cost | $49.25 (API 1h 31m 37s, wall 7h 35m 14s) |
+
+Notes:
+- Full milestone progression v0.0.1 through v1.0.0-rc.1 executed autonomously.
+- Token counts: unique message sum above; raw assistant event stream totals 1,328 input / 309,156,856 cache read / 3,891,759 cache create / 1,616,140 output (314,666,083 total). Claude Code `/usage` reports 3.3k in / 168.1m cache read / 2.0m cache write / 773.9k out ($49.25).
+- All 11 annotated tags created, pushed, and verified.
+- Pre-release `v1.0.0-rc.1` published on GitHub with 4 assets, verified by `sha256sum -c`.
+- Desktop acceptance tests LUC-T01 through LUC-T20 frozen in `docs/MANUAL-ACCEPTANCE.md` with status `NOT RUN — REQUIRES REAL DESKTOP`. Desktop appearance status: `IMPLEMENTED — MANUAL DESKTOP VALIDATION REQUIRED`.
 
 ### Milestone log
 
 | Tag | SHA | Gates (fmt/clippy/test/build) | Packaging | CI | Notes |
 | --- | --- | --- | --- | --- | --- |
 | v0.0.1 | 8e6862f | PASS (fmt, clippy -D warnings, 6 tests, release build, headless smoke tests) | n/a | PASS (#36644636839) | Workspace bootstrap (8 crates), architecture boundary test, headless safe |
-| v0.1.0 | | | n/a | | |
-| v0.2.0 | | | n/a | | |
-| v0.3.0 | | | n/a | | |
-| v0.4.0 | | | n/a | | |
-| v0.5.0 | | | n/a | | |
-| v0.6.0 | | | n/a | | |
-| v0.7.0 | | | deb+rpm | | |
-| v0.8.0 | | | deb+rpm | | |
-| v0.9.0 | | | deb+rpm | | |
-| v1.0.0-rc.1 | | | deb+rpm+tgz+sums | | |
+| v0.1.0 | 4434647 | PASS (fmt, clippy, unit/integration tests, mpv supervision) | n/a | PASS (#36646823076) | Renderer core, mpv process supervision & IPC socket, restart policy |
+| v0.2.0 | 6652f06 | PASS (fmt, clippy, Xvfb protocol tests) | n/a | PASS (#36648650162) | Cinnamon/X11 backend, protocol tests under Xvfb, unmanaged bottom surface |
+| v0.3.0 | 9e2bc3f | PASS (fmt, clippy, daemon integration, cli e2e) | n/a | PASS (#36652644543) | Daemon (lucernad) and CLI (lucernactl), D-Bus IPC, single instance lock |
+| v0.4.0 | be7adf4 | PASS (fmt, clippy, GTK UI structure tests) | n/a | PASS (#36654603327) | GTK 4 control application (lucerna), headless-safe exit 1, settings presenter |
+| v0.5.0 | ec3d3f9 | PASS (fmt, clippy, multi-monitor tests) | n/a | PASS (#36656747986) | Multi-monitor EDID identity, per-display wallpaper, occlusion & screen lock policy |
+| v0.6.0 | fb9a87f | PASS (fmt, clippy, lifecycle recovery tests) | n/a | PASS (#36657813596) | Desktop lifecycle, autostart synchronization, crash recovery, bounded logs |
+| v0.7.0 | 1862428 | PASS (fmt, clippy, packaging smoke tests) | deb+rpm (PASS) | PASS (#36666208616, pkgs #36665848190) | Native packaging definitions, man pages, container build & install smoke tests |
+| v0.8.0 | 1f79de3 | PASS (fmt, clippy, full test matrix) | deb+rpm (PASS) | PASS (#36667188842, pkgs #36667189090, rel #36667189051) | Automated distribution pipeline (release.yml 12-step verification) |
+| v0.9.0 | d52b568 | PASS (fmt, clippy, doctor diagnostics) | deb+rpm (PASS) | PASS (#36668440115, pkgs #36668440462, rel #36668440356) | Release candidate baseline, doctor diagnostics, docs freeze & acceptance test list |
+| v1.0.0-rc.1 | eea6446 | PASS (fmt, clippy, full workspace tests, release build) | deb+rpm+tgz+sums (PASS) | PASS (#36669703759; see deviation for release) | Desktop acceptance candidate. GitHub pre-release with 4 verified assets |
+
+### Deviations & Incidents
+- **v1.0.0-rc.1 Release Workflow Failure & Manual Dispatch Fix:**
+  On pushing the tag `v1.0.0-rc.1` (commit `eea6446`), the release workflow run `36669703879` passed jobs 1-4 (tag/version check), job 9 (source archive), jobs 5-6 (full test suite, clippy, headless smoke, cargo-deny, shellcheck), and jobs 7-8 (native container package builds and install smoke tests in fresh Ubuntu 24.04 and Fedora 44 containers), but **FAILED at job 10-12** (step 6: `11-12. Create or update the release and attach the artifacts`) due to asset naming in `gh release upload` where GitHub sanitizes `~` to `.` for uploaded Debian package names (`lucerna_1.0.0~rc1_amd64.deb` vs `lucerna_1.0.0.rc1_amd64.deb`).
+  The harness developed a workflow fix on branch `ci/release-existing-tag` (commit `bc27f72`: *"ci: allow releasing an existing tag by hand and name assets as GitHub serves them"*), merged it to `main` (`3acface`), and re-ran the release workflow via manual `workflow_dispatch` run `36671007802` targeting `v1.0.0-rc.1`. Run `36671007802` completed successfully (6m 29s), publishing pre-release `v1.0.0-rc.1` with all four expected assets (`lucerna-1.0.0-0.rc1.x86_64.rpm`, `lucerna-1.0.0-rc.1.tar.gz`, `lucerna_1.0.0.rc1_amd64.deb`, `SHA256SUMS`). Checksum verification (`sha256sum -c SHA256SUMS`) verified cleanly on fresh download.
+- **Supervisor Idle Discriminator Failure:**
+  The supervisor monitoring loop failed to report milestones between v0.1.0 and completion because it checked `grep -q '❯ Try "'` to detect idle prompts. The Claude Code composer hint line is dynamic/rotating (observed values include `Save the session notes to memory`, `Research this topic and write me a brief`, `Try "write a test..."`), causing the supervisor to misclassify a parked/completed harness as working. SUPERVISOR-BRIEF.md has been corrected: absence of `esc to interrupt` in the status bar is the authoritative idle discriminator.
 
 ---
 
