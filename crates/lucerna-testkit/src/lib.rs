@@ -5,6 +5,8 @@
 
 #![allow(clippy::expect_used, clippy::unwrap_used, clippy::panic)]
 
+pub mod fixture;
+pub mod testbus;
 pub mod xvfb;
 
 use std::fs;

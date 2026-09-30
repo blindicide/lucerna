@@ -232,7 +232,9 @@ pub enum BackendError {
     Protocol(String),
 }
 
-pub trait WallpaperBackend: Send {
+/// `Sync` as well as `Send` so the daemon's engine future can move between threads even though it
+/// only ever uses the backend from one task at a time.
+pub trait WallpaperBackend: Send + Sync {
     fn kind(&self) -> BackendKind;
     /// Collect environment facts and capabilities. Idempotent and read-only.
     fn probe(&mut self) -> Result<BackendProbe, BackendError>;
