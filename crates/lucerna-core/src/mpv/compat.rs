@@ -62,12 +62,13 @@ pub fn probe_args() -> Vec<OsString> {
 
 /// Run the probe against `mpv`.
 pub fn check_compat(mpv: &Path) -> io::Result<CompatReport> {
-    let mut child = Command::new(mpv)
-        .args(probe_args())
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::piped())
-        .spawn()?;
+    let mut child = super::discovery::spawn_retrying(
+        Command::new(mpv)
+            .args(probe_args())
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::piped()),
+    )?;
     let deadline = Instant::now() + Duration::from_secs(10);
     let status = loop {
         if let Some(status) = child.try_wait()? {
