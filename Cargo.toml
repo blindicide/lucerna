@@ -16,15 +16,18 @@ anyhow = "1.0"
 clap = { version = "4.6", features = ["derive"] }
 dirs = "7.0"
 gtk4 = { version = "0.11", features = ["v4_10"] }
-rustix = { version = "1.1", features = ["process"] }
+rustix = { version = "1.1", features = ["process", "fs"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 signal-hook = "0.3"
 thiserror = "2.0"
 x11rb = { version = "0.14", features = ["randr", "shape"] }
-tokio = { version = "1.53", features = ["rt", "macros", "process", "net", "io-util", "time", "sync"] }
+tokio = { version = "1.53", features = ["rt", "macros", "process", "net", "io-util", "time", "sync", "signal"] }
 toml = "1.1"
+toml_edit = "0.25"
 tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+zbus = "5"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Internal crates. `publish = false` makes a version unnecessary, so the root

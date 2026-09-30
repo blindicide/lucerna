@@ -111,6 +111,31 @@ pub fn ensure_app_dir(base: &Path) -> Result<PathBuf, RuntimeDirError> {
     Ok(dir)
 }
 
+/// Create (if needed) and verify `dir` itself as a private directory (mode 0700, owned by us).
+/// Unlike [`ensure_app_dir`], `dir` is the final directory, not its parent.
+pub fn ensure_private_dir(dir: &Path) -> Result<(), RuntimeDirError> {
+    let uid = current_uid().map_err(|source| RuntimeDirError::Io {
+        path: PathBuf::from("/proc/self"),
+        source,
+    })?;
+    if let Some(parent) = dir.parent()
+        && !parent.is_dir()
+    {
+        return Err(RuntimeDirError::MissingParent(parent.to_path_buf()));
+    }
+    match fs::DirBuilder::new().mode(0o700).create(dir) {
+        Ok(()) => {}
+        Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {}
+        Err(source) => {
+            return Err(RuntimeDirError::Io {
+                path: dir.to_path_buf(),
+                source,
+            });
+        }
+    }
+    verify_private_dir(dir, uid)
+}
+
 #[derive(Debug, thiserror::Error)]
 #[error(
     "The renderer socket path {path} is {len} bytes long; the limit is {SOCKET_PATH_MAX}.\n\
