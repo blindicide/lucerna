@@ -874,7 +874,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "lucerna-cli"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "clap",
  "lucerna-core",
@@ -887,7 +887,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-core"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "dirs",
  "serde",
@@ -901,7 +901,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-daemon"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -920,7 +920,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-ipc"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "lucerna-core",
  "serde",
@@ -931,7 +931,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-mpv"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "lucerna-core",
  "rustix",
@@ -944,7 +944,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-testkit"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "futures-util",
  "lucerna-cli",
@@ -964,7 +964,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-ui"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "clap",
  "futures-util",
@@ -980,7 +980,7 @@ dependencies = [
 
 [[package]]
 name = "lucerna-x11"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "lucerna-core",
  "serde",
