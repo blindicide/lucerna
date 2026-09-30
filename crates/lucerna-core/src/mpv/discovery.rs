@@ -118,14 +118,33 @@ pub fn discover_from_env() -> Result<MpvInfo, DiscoveryError> {
     )
 }
 
+/// Spawn `command`, retrying briefly while the executable is busy.
+///
+/// `ETXTBSY` ("text file busy") is returned by `exec` while some process still holds the file open
+/// for writing. That happens when mpv is being upgraded, and in tests that write a small script and
+/// run it while another thread forks (the child briefly inherits the write descriptor).
+pub(crate) fn spawn_retrying(command: &mut Command) -> io::Result<std::process::Child> {
+    let mut attempts = 0;
+    loop {
+        match command.spawn() {
+            Err(e) if e.kind() == io::ErrorKind::ExecutableFileBusy && attempts < 50 => {
+                attempts += 1;
+                std::thread::sleep(Duration::from_millis(20));
+            }
+            other => return other,
+        }
+    }
+}
+
 /// Run a program with a hard timeout and return its stdout. The output must be small.
 fn run_capture(program: &Path, args: &[&str], timeout: Duration) -> io::Result<String> {
-    let mut child = Command::new(program)
-        .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()?;
+    let mut child = spawn_retrying(
+        Command::new(program)
+            .args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null()),
+    )?;
     let deadline = Instant::now() + timeout;
     loop {
         match child.try_wait()? {
