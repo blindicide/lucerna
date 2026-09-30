@@ -54,6 +54,7 @@ pub struct EngineOpts {
     pub mpv_override: Option<OsString>,
     pub path_var: Option<OsString>,
     pub autostart_on_first_run: bool,
+    pub system_bus: crate::options::SystemBusChoice,
 }
 
 /// The state of mpv discovery.
@@ -108,6 +109,7 @@ pub struct Engine {
     pub(crate) session_locked: bool,
     pub(crate) occluded: BTreeSet<OutputId>,
     pub(crate) lock_detection: bool,
+    pub(crate) lock_source: Option<crate::screensaver::LockSource>,
     /// Recent `refresh()` calls, to stop a restack fight with the window manager (§5.2).
     pub(crate) restack_times: std::collections::VecDeque<Instant>,
     pub(crate) restack_fights: u32,
@@ -163,6 +165,7 @@ impl Engine {
             session_locked: false,
             occluded: BTreeSet::new(),
             lock_detection: false,
+            lock_source: None,
             restack_times: std::collections::VecDeque::new(),
             restack_fights: 0,
             status_deadline: None,
@@ -178,8 +181,35 @@ impl Engine {
         self.first_run_autostart();
         self.discover_mpv().await;
         self.init_backend().await;
+        self.start_lock_monitor().await;
         self.reconcile().await;
         self.arm_recheck();
+    }
+
+    /// Find out whether (and how) the session tells us about screen locking (§15).
+    async fn start_lock_monitor(&mut self) {
+        use crate::options::SystemBusChoice;
+        let system = match &self.opts.system_bus {
+            SystemBusChoice::System => zbus::Connection::system().await.ok(),
+            SystemBusChoice::Address(address) => {
+                match zbus::connection::Builder::address(address.as_str()) {
+                    Ok(builder) => builder.build().await.ok(),
+                    Err(_) => None,
+                }
+            }
+            SystemBusChoice::Disabled => None,
+        };
+        let session_id = self.opts.session.xdg_session_id.clone();
+        self.lock_source =
+            crate::screensaver::start(&self.conn, system, session_id.as_deref(), self.tx.clone())
+                .await;
+        self.lock_detection = self.lock_source.is_some();
+        match self.lock_source {
+            Some(source) => {
+                tracing::info!(source = source.as_str(), "screen lock detection enabled")
+            }
+            None => tracing::info!("no screen lock detection available in this session"),
+        }
     }
 
     pub(crate) fn load_config_and_state(&mut self) {

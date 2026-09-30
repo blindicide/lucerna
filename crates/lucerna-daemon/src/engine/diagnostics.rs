@@ -34,6 +34,7 @@ impl Engine {
             "status": status,
             "backend": backend,
             "backend_diagnostics": backend_diagnostics,
+            "lock_detection": {"available": self.lock_detection, "source": self.lock_source.map(|s| s.as_str())},
             "restack": {"fights": self.restack_fights, "recent_refreshes": self.restack_times.len()},
             "session": {
                 "kind": self.session_kind.as_str(),

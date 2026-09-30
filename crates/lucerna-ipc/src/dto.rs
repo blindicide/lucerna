@@ -168,7 +168,10 @@ pub struct DisplayDto {
     pub wallpaper_id: String,
     /// `display`, `all` or `none`.
     pub wallpaper_source: String,
+    /// The effective scaling mode.
     pub scaling: String,
+    /// `display` if this display overrides the all-displays scaling, else `all`.
+    pub scaling_source: String,
 }
 
 impl DisplayDto {
@@ -190,6 +193,7 @@ impl DisplayDto {
             .str("wallpaper_id", &self.wallpaper_id)
             .str("wallpaper_source", &self.wallpaper_source)
             .str("scaling", &self.scaling)
+            .str("scaling_source", &self.scaling_source)
             .build()
     }
 
@@ -212,6 +216,7 @@ impl DisplayDto {
             wallpaper_id: r.str_or_empty("wallpaper_id"),
             wallpaper_source: r.str_or_empty("wallpaper_source"),
             scaling: r.str_or_empty("scaling"),
+            scaling_source: r.str_or_empty("scaling_source"),
         }
     }
 }
@@ -510,6 +515,7 @@ mod tests {
             wallpaper_id: "w".into(),
             wallpaper_source: "all".into(),
             scaling: "fit".into(),
+            scaling_source: "display".into(),
         };
         assert_eq!(DisplayDto::from_dict(&display.to_dict()), display);
 

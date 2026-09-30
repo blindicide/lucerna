@@ -19,6 +19,17 @@ pub enum BusChoice {
     Address(String),
 }
 
+/// Which system bus to use for the logind lock probe.
+#[derive(Clone, Debug)]
+pub enum SystemBusChoice {
+    /// The real system bus.
+    System,
+    /// An explicit address (tests with a fake logind).
+    Address(String),
+    /// Do not probe logind.
+    Disabled,
+}
+
 /// Where the wallpaper backend comes from.
 pub enum BackendChoice {
     /// Pick from the session: X11 (Cinnamon or generic) or none.
@@ -31,6 +42,7 @@ pub struct DaemonOptions {
     pub paths: Paths,
     pub session: SessionEnv,
     pub bus: BusChoice,
+    pub system_bus: SystemBusChoice,
     pub backend: BackendChoice,
     /// `LUCERNA_MPV`.
     pub mpv_override: Option<OsString>,
@@ -60,6 +72,7 @@ impl DaemonOptions {
             paths: Paths::from_env(),
             session: SessionEnv::from_env(),
             bus: BusChoice::Session,
+            system_bus: SystemBusChoice::System,
             backend: BackendChoice::Auto,
             mpv_override: std::env::var_os("LUCERNA_MPV"),
             path_var: std::env::var_os("PATH"),
