@@ -6,6 +6,20 @@ All notable changes to Lucerna are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] - 2026-09-30
+
+The desktop acceptance candidate. No feature changes since 0.9.0: this version exists so the
+packages built by the release pipeline can be installed on a real Linux Mint Cinnamon (X11)
+machine and `docs/MANUAL-ACCEPTANCE.md` (LUC-T01 to LUC-T20) can be run.
+
+### Notes
+- Packages: `lucerna_1.0.0~rc1_amd64.deb`, `lucerna-1.0.0-0.rc1.x86_64.rpm`,
+  `lucerna-1.0.0-rc.1.tar.gz` and `SHA256SUMS`, published as a GitHub pre-release.
+- **Not validated on a real desktop.** Wallpaper appearance, icon layering, window stacking, the
+  GUI's look and the menu entry are implemented but unverified; every acceptance test is still
+  `NOT RUN — REQUIRES REAL DESKTOP`.
+- `v1.0.0` will be tagged only after the acceptance campaign has been run by a person.
+
 ## [0.9.0] - 2026-09-30
 
 ### Added
