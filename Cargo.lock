@@ -946,6 +946,7 @@ dependencies = [
 name = "lucerna-testkit"
 version = "0.5.0"
 dependencies = [
+ "futures-util",
  "lucerna-cli",
  "lucerna-core",
  "lucerna-daemon",
