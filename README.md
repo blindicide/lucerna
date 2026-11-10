@@ -97,4 +97,4 @@ features and telemetry are out of scope. Lucerna makes no network requests.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+All rights reserved. See [LICENSE](LICENSE).
